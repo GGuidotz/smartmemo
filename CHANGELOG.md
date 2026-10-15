@@ -22,4 +22,5 @@ La prima versione: to-do e riunioni che si capiscono mentre le scrivi, in schede
 - Aggiornamenti: controllo automatico ogni 6 ore e aggiornamento con un clic nel Terminale (Homebrew o dai sorgenti).
 - Configura dalle tue note: incolli o apri qualche pagina delle tue note, decidi cosa è progetto, cosa è persona o cliente e cosa evidenziare, con l'anteprima sul tuo testo. Il testo non si salva; la configurazione resta sul Mac e si può esportare e importare come file tuo.
 - SmartMemo impara sigle e persone da ciò che scrivi; clic destro su una parola per correggerlo ("non è una persona", "è un progetto").
+- Un + per aggiungere a mano progetti e persone: nella barra laterale accanto a Progetti, in Impostazioni › Progetti e persone e nella configurazione guidata. "SITO Nuovo sito" aggiunge la sigla con il suo nome lungo.
 - Le note sono file Markdown in iCloud Drive/SmartMemo (o in Documenti/SmartMemo). Nessun servizio esterno.

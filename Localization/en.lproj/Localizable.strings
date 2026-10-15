@@ -34,7 +34,6 @@
 "Nascondi SmartMemo" = "Hide SmartMemo";
 "Nascondi altre" = "Hide Others";
 "Nessuna pagina di to-do" = "No to-do pages";
-"Nessuna persona ancora." = "No people yet.";
 "Nessuna riunione" = "No meetings";
 "Niente da fare" = "Nothing to do";
 "Niente da fare per %@" = "Nothing to do for %@";
@@ -219,12 +218,10 @@
 "manda il preventivo" = "send the quote";
 "manda il preventivo a" = "send the quote to";
 "rivedi le slide con i commenti" = "review the slides with comments";
-"Nessun progetto ancora. Scrivi una sigla seguita dai due punti, come SITO:" = "No projects yet. Type a code followed by a colon, like SITO:";
 
 /* Configurazione guidata */
 "%d progetti e %d persone o clienti. Salva e SmartMemo li riconosce da subito, in ogni scheda." = "%d projects and %d people or clients. Save and SmartMemo recognizes them right away, in every card.";
 "Aggiungi" = "Add";
-"Aggiungi una sigla o un nome" = "Add a code or a name";
 "Anteprima sulle tue note" = "Preview on your notes";
 "Apri un file…" = "Open a file…";
 "Cambi idea più tardi? Impostazioni › Progetti e persone, o clic destro su una parola nella nota." = "Change your mind later? Settings › Projects and people, or right-click a word in the note.";
@@ -246,7 +243,6 @@
 "Incolli qualche pagina delle tue note e decidi tu cosa è progetto, cosa è persona e cosa evidenziare. Resta tutto sul Mac." = "Paste a few pages of your notes and decide what is a project, what is a person and what to highlight. Everything stays on the Mac.";
 "Le tue note" = "Your notes";
 "Niente" = "Nothing";
-"Non ho trovato sigle o nomi: aggiungili qui sotto." = "No codes or names found: add them below.";
 "Non riesco a leggere il file: serve testo semplice o Markdown." = "Can't read the file: it needs to be plain text or Markdown.";
 "Parti da qualche pagina delle tue note e decidi cosa è progetto, cosa è persona e cosa evidenziare. Tutto resta su questo Mac; l'esportazione è un file tuo, per un altro Mac o per ripartire da lì." = "Start from a few pages of your notes and decide what is a project, what is a person and what to highlight. Everything stays on this Mac; the export is your own file, for another Mac or to start over from there.";
 "Parti dalle tue note" = "Start from your notes";
@@ -263,3 +259,19 @@
 "Tipo" = "Type";
 "URGENTE" = "URGENTE";
 "URGENTE: capsula rossa" = "URGENTE: red capsule";
+
+/* Il + per progetti e persone */
+"Aggiungi un progetto" = "Add a project";
+"Aggiungi un progetto o una persona" = "Add a project or a person";
+"Aggiungi una persona o un cliente" = "Add a person or a client";
+"Aggiunto: %@" = "Added: %@";
+"Dopo la sigla puoi scrivere il nome lungo: SITO Nuovo sito." = "After the code you can type the long name: SITO New website.";
+"Nessun progetto ancora. Premi + o scrivi nelle note una sigla seguita dai due punti, come SITO:" = "No projects yet. Press + or type a code followed by a colon in your notes, like SITO:";
+"Nessuna persona ancora. Premi + per aggiungerne una." = "No people yet. Press + to add one.";
+"Nome, es. Marta" = "Name, e.g. Marta";
+"Nome, es. Marta o Studio Rossi" = "Name, e.g. Marta or Studio Rossi";
+"Non ho trovato sigle o nomi: aggiungili con + qui sotto." = "No codes or names found: add them with + below.";
+"Persona o cliente" = "Person or client";
+"Si evidenzia in ogni nota, anche dove l'app da sola non l'avrebbe riconosciuto." = "It's highlighted in every note, even where the app wouldn't have recognized it on its own.";
+"Sigla, es. SITO" = "Code, e.g. SITO";
+"Sigla, es. SITO o SITO Nuovo sito" = "Code, e.g. SITO or SITO New website";

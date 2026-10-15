@@ -310,6 +310,8 @@ private struct LearnedSettings: View {
     @ObservedObject var model: AppModel
     @ObservedObject var prefs: Preferences
     @State private var exportMessage: String?
+    @State private var addingProject = false
+    @State private var addingPerson = false
 
     var body: some View {
         Form {
@@ -333,20 +335,32 @@ private struct LearnedSettings: View {
                 Text(L("Evidenzia mentre scrivi"))
             }
             Section {
-                if model.knowledge.projects.isEmpty {
-                    Text(L("Nessun progetto ancora. Scrivi una sigla seguita dai due punti, come SITO:")).foregroundStyle(.secondary)
+                if addingProject {
+                    NewNameField(prompt: L("Sigla, es. SITO o SITO Nuovo sito")) { model.addProject($0) } close: {
+                        addingProject = false
+                    }
+                } else if model.knowledge.projects.isEmpty {
+                    Text(L("Nessun progetto ancora. Premi + o scrivi nelle note una sigla seguita dai due punti, come SITO:")).foregroundStyle(.secondary)
                 }
                 ForEach(model.knowledge.projects, id: \.self) { sigla in
                     ProjectRow(model: model, sigla: sigla)
                 }
             } header: {
-                Text(L("Progetti"))
+                HStack {
+                    Text(L("Progetti"))
+                    Spacer()
+                    PlusButton(help: L("Aggiungi un progetto")) { addingProject = true }
+                }
             } footer: {
                 Footnote(L("Il nome lungo è facoltativo: compare accanto alla sigla nella vista Oggi."))
             }
             Section {
-                if model.knowledge.people.isEmpty {
-                    Text(L("Nessuna persona ancora.")).foregroundStyle(.secondary)
+                if addingPerson {
+                    NewNameField(prompt: L("Nome, es. Marta o Studio Rossi")) { model.addPerson($0) } close: {
+                        addingPerson = false
+                    }
+                } else if model.knowledge.people.isEmpty {
+                    Text(L("Nessuna persona ancora. Premi + per aggiungerne una.")).foregroundStyle(.secondary)
                 }
                 ForEach(model.knowledge.people, id: \.self) { name in
                     HStack {
@@ -357,7 +371,11 @@ private struct LearnedSettings: View {
                     }
                 }
             } header: {
-                Text(L("Persone e clienti"))
+                HStack {
+                    Text(L("Persone e clienti"))
+                    Spacer()
+                    PlusButton(help: L("Aggiungi una persona o un cliente")) { addingPerson = true }
+                }
             } footer: {
                 Footnote(L("SmartMemo impara da ciò che scrivi. Se sbaglia, clic destro sulla parola nella nota."))
             }

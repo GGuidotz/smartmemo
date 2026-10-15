@@ -199,6 +199,23 @@ final class AppModel: ObservableObject {
     func forgetProject(_ sigla: String) { correct(.notProject(sigla)) }
     func forgetPerson(_ name: String) { correct(.notPerson(name)) }
 
+    /// Il + della barra laterale e delle impostazioni: "SITO" o "SITO Nuovo sito". Dice la sigla aggiunta.
+    @discardableResult
+    func addProject(_ input: String) -> String? {
+        guard let entry = ManualEntry.project(input) else { return nil }
+        correct(.project(entry.sigla))
+        if let name = entry.name { setProjectName(entry.sigla, name) }
+        return entry.sigla
+    }
+
+    /// Il + per persone e clienti. Dice il nome aggiunto.
+    @discardableResult
+    func addPerson(_ input: String) -> String? {
+        guard let name = ManualEntry.person(input) else { return nil }
+        correct(.person(name))
+        return name
+    }
+
     /// La configurazione guidata o un file importato: ciò che l'app sa, sostituito o unito.
     func applySetup(_ k: Knowledge, replace: Bool) {
         setKnowledge(replace ? k : knowledge.merged(with: k))

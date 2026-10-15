@@ -47,8 +47,8 @@ struct SetupView: View {
     @State private var step = 0
     @State private var text = ""
     @State private var candidates: [SetupCandidate] = []
-    @State private var newName = ""
-    @State private var newRole: SetupCandidate.Role = .person
+    /// Il + aperto: per un progetto o per una persona.
+    @State private var adding: SetupCandidate.Role?
     @State private var message: String?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -112,7 +112,7 @@ struct SetupView: View {
             ScrollView {
                 VStack(spacing: 0) {
                     if candidates.isEmpty {
-                        Text(L("Non ho trovato sigle o nomi: aggiungili qui sotto."))
+                        Text(L("Non ho trovato sigle o nomi: aggiungili con + qui sotto."))
                             .foregroundStyle(.secondary)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(10)
@@ -125,18 +125,21 @@ struct SetupView: View {
             }
             .frame(height: 300)
             .background(Color(nsColor: .textBackgroundColor).opacity(0.6), in: .rect(cornerRadius: 10))
-            HStack(spacing: 8) {
-                TextField(L("Aggiungi una sigla o un nome"), text: $newName)
-                    .textFieldStyle(.roundedBorder)
-                    .onSubmit(addCandidate)
-                Picker(L("Tipo"), selection: $newRole) {
-                    Text(L("Progetto")).tag(SetupCandidate.Role.project)
-                    Text(L("Persona")).tag(SetupCandidate.Role.person)
+            if let role = adding {
+                NewNameField(prompt: role == .project ? L("Sigla, es. SITO") : L("Nome, es. Marta o Studio Rossi")) {
+                    addCandidate($0, role: role)
+                } close: {
+                    adding = nil
                 }
-                .labelsHidden()
-                .frame(width: 120)
-                Button(L("Aggiungi"), action: addCandidate)
-                    .disabled(newName.trimmingCharacters(in: .whitespaces).isEmpty)
+                .id(role)
+            } else {
+                HStack(spacing: 8) {
+                    Button { adding = .project } label: { Label(L("Progetto"), systemImage: "plus") }
+                        .help(L("Aggiungi un progetto"))
+                    Button { adding = .person } label: { Label(L("Persona o cliente"), systemImage: "plus") }
+                        .help(L("Aggiungi una persona o un cliente"))
+                    Spacer()
+                }
             }
         }
     }
@@ -284,12 +287,13 @@ struct SetupView: View {
         withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) { step = min(max(0, next), steps - 1) }
     }
 
-    private func addCandidate() {
-        let name = newName.trimmingCharacters(in: .whitespaces)
-        guard !name.isEmpty else { return }
+    /// Il + della seconda pagina: in cima all'elenco, già con la scelta fatta.
+    private func addCandidate(_ input: String, role: SetupCandidate.Role) -> String? {
+        let name = role == .project ? ManualEntry.project(input)?.sigla : ManualEntry.person(input)
+        guard let name else { return nil }
         candidates.removeAll { $0.name == name }
-        candidates.insert(SetupCandidate(name: name, role: newRole, count: 0, example: ""), at: 0)
-        newName = ""
+        candidates.insert(SetupCandidate(name: name, role: role, count: 0, example: ""), at: 0)
+        return name
     }
 
     // MARK: - File (solo sul Mac)

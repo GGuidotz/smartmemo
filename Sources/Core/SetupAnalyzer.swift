@@ -96,3 +96,37 @@ extension Knowledge {
         return k
     }
 }
+
+/// Ciò che si scrive nel campo del +: una sigla o un nome, ripuliti come l'app li riconosce nelle note.
+enum ManualEntry {
+    /// "SITO", "#sito", "SITO:" → SITO. Ciò che segue la sigla diventa il nome lungo: "SITO Nuovo sito".
+    /// Una sigla tutta minuscola si scrive maiuscola; deve cominciare con una lettera.
+    static func project(_ input: String) -> (sigla: String, name: String?)? {
+        var s = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        if s.hasPrefix("#") { s.removeFirst() }
+        var head = s[...]
+        var rest = ""[...]
+        if let i = s.firstIndex(where: { $0 == ":" || $0.isWhitespace }) {
+            head = s[..<i]
+            rest = s[s.index(after: i)...]
+        }
+        var sigla = String(head.filter { $0.isLetter || $0.isNumber || "&._-".contains($0) }.prefix(24))
+        guard let first = sigla.first, first.isLetter else { return nil }
+        if sigla == sigla.lowercased() {
+            sigla = sigla.uppercased()
+        } else if first.isLowercase {
+            sigla = first.uppercased() + String(sigla.dropFirst())
+        }
+        let name = rest.trimmingCharacters(in: CharacterSet.whitespaces.union(CharacterSet(charactersIn: ":-–·")))
+        return (sigla, name.isEmpty ? nil : name)
+    }
+
+    /// Un nome di persona o di cliente, con gli spazi in ordine e la maiuscola iniziale: "studio  rossi" → "Studio rossi".
+    static func person(_ input: String) -> String? {
+        var s = input.split(whereSeparator: \.isWhitespace).joined(separator: " ")
+            .trimmingCharacters(in: CharacterSet(charactersIn: "@()"))
+        guard let first = s.first, first.isLetter else { return nil }
+        if first.isLowercase { s = first.uppercased() + String(s.dropFirst()) }
+        return s
+    }
+}

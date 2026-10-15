@@ -41,6 +41,7 @@ struct MainView: View {
 
 private struct Sidebar: View {
     @ObservedObject var model: AppModel
+    @State private var adding = false
 
     var body: some View {
         List(selection: $model.sidebar) {
@@ -49,23 +50,29 @@ private struct Sidebar: View {
                 Label(L("To-do"), systemImage: NoteKind.todo.symbol).tag(SidebarItem.todos)
                 Label(L("Riunioni"), systemImage: NoteKind.meeting.symbol).tag(SidebarItem.meetings)
             }
-            let projects = model.sidebarProjects
-            if !projects.isEmpty {
-                Section(L("Progetti")) {
-                    ForEach(projects) { p in
-                        Label {
-                            Text(model.projectTitle(p.sigla)).lineLimit(1)
-                        } icon: {
-                            Image(systemName: "circle.fill")
-                                .foregroundStyle(Color.project(p.sigla, knowledge: model.knowledge))
-                                .font(.system(size: 9))
-                        }
-                        .badge(p.open)
-                        .tag(SidebarItem.project(p.sigla))
-                        .contextMenu {
-                            Button(L("Non è un progetto")) { model.forgetProject(p.sigla) }
-                        }
+            Section {
+                ForEach(model.sidebarProjects) { p in
+                    Label {
+                        Text(model.projectTitle(p.sigla)).lineLimit(1)
+                    } icon: {
+                        Image(systemName: "circle.fill")
+                            .foregroundStyle(Color.project(p.sigla, knowledge: model.knowledge))
+                            .font(.system(size: 9))
                     }
+                    .badge(p.open)
+                    .tag(SidebarItem.project(p.sigla))
+                    .contextMenu {
+                        Button(L("Non è un progetto")) { model.forgetProject(p.sigla) }
+                    }
+                }
+            } header: {
+                HStack {
+                    Text(L("Progetti"))
+                    Spacer()
+                    PlusButton(help: L("Aggiungi un progetto o una persona")) { adding = true }
+                        .popover(isPresented: $adding, arrowEdge: .trailing) {
+                            AddEntityPopover(model: model) { adding = false }
+                        }
                 }
             }
         }
