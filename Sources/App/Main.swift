@@ -29,6 +29,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem?
     private let settings = SettingsWindowController()
     private let onboarding = OnboardingWindowController()
+    private let setup = SetupWindowController()
     private lazy var cards = CardWindows(model: model)
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -36,6 +37,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         model.showCard = { [weak self] doc in self?.cards.show(doc) }
         model.showSettings = { [weak self] tab in self?.showSettings(tab) }
         model.showOnboarding = { [weak self] in self?.showOnboarding() }
+        model.showSetup = { [weak self] in self?.showSetup() }
         model.prefs.onChange = { [weak self] in self?.applyPreferences() }
         applyPreferences()
         model.updater.start()
@@ -81,6 +83,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Cambio di lingua: la finestra principale si ridisegna subito.
         (window?.contentViewController as? NSHostingController<MainView>)?.rootView = MainView(model: model)
         cards.applyPreferences()
+        model.restyleCards()
         if model.prefs.hotKeyEnabled {
             hotKey.register { [weak self] in self?.quickPanel.toggle() }
         } else {
@@ -148,6 +151,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func showSettings(_ tab: SettingsTab?) { settings.show(model: model, tab: tab) }
     func showOnboarding() { onboarding.show(model: model) }
+    func showSetup() { setup.show(model: model) }
+    @objc func openSetup(_ sender: Any?) { showSetup() }
 
     @objc func showSection(_ sender: NSMenuItem) {
         let sections: [SidebarItem] = [.today, .todos, .meetings]
@@ -201,6 +206,7 @@ enum MainMenu {
 
         let file = NSMenu(title: L("Archivio"))
         for item in delegate.newItems(withShortcuts: true) { file.addItem(item) }
+        file.addItem(withTitle: L("Configura dalle tue note…"), action: #selector(AppDelegate.openSetup(_:)), keyEquivalent: "").target = delegate
         let quick = file.addItem(withTitle: L("Apertura rapida…"), action: #selector(AppDelegate.quickPanelAction(_:)), keyEquivalent: "")
         quick.target = delegate
         quick.toolTip = HotKey.display

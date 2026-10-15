@@ -20,5 +20,6 @@ La prima versione: to-do e riunioni che si capiscono mentre le scrivi, in schede
 - Guida al primo avvio in cinque passi, con esempi disegnati come nelle schede e le scelte principali.
 - Impostazioni: Generale, Apple Intelligence, Progetti e persone, Aggiornamenti con le note di rilascio, Feedback con segnalazioni su GitHub, email e report di diagnostica (senza il testo delle note).
 - Aggiornamenti: controllo automatico ogni 6 ore e aggiornamento con un clic nel Terminale (Homebrew o dai sorgenti).
+- Configura dalle tue note: incolli o apri qualche pagina delle tue note, decidi cosa è progetto, cosa è persona o cliente e cosa evidenziare, con l'anteprima sul tuo testo. Il testo non si salva; la configurazione resta sul Mac e si può esportare e importare come file tuo.
 - SmartMemo impara sigle e persone da ciò che scrivi; clic destro su una parola per correggerlo ("non è una persona", "è un progetto").
 - Le note sono file Markdown in iCloud Drive/SmartMemo (o in Documenti/SmartMemo). Nessun servizio esterno.

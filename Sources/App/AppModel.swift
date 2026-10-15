@@ -57,6 +57,7 @@ final class AppModel: ObservableObject {
     var showCard: (OpenDocument) -> Void = { _ in }
     var showSettings: (SettingsTab) -> Void = { _ in }
     var showOnboarding: () -> Void = {}
+    var showSetup: () -> Void = {}
 
     private var refreshWork: DispatchWorkItem?
 
@@ -197,6 +198,15 @@ final class AppModel: ObservableObject {
 
     func forgetProject(_ sigla: String) { correct(.notProject(sigla)) }
     func forgetPerson(_ name: String) { correct(.notPerson(name)) }
+
+    /// La configurazione guidata o un file importato: ciò che l'app sa, sostituito o unito.
+    func applySetup(_ k: Knowledge, replace: Bool) {
+        setKnowledge(replace ? k : knowledge.merged(with: k))
+        refresh()
+    }
+
+    /// Ridisegna le schede aperte (cambiate le cose da evidenziare).
+    func restyleCards() { knowledgeVersion += 1 }
 
     func setProjectName(_ sigla: String, _ name: String) {
         var k = knowledge

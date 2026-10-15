@@ -17,6 +17,11 @@ final class Preferences: ObservableObject {
     /// Riassunti delle riunioni con Apple Intelligence (sul Mac). Spento: riassunto con le regole.
     @Published var useAppleIntelligence: Bool { didSet { defaults.set(useAppleIntelligence, forKey: "useAppleIntelligence") } }
     @Published var autoCheckUpdates: Bool { didSet { defaults.set(autoCheckUpdates, forKey: "autoCheckUpdates") } }
+    /// Cosa si evidenzia nelle schede (si riconosce comunque: serve a Oggi e ai progetti).
+    @Published var highlightProjects: Bool { didSet { defaults.set(highlightProjects, forKey: "highlightProjects"); onChange() } }
+    @Published var highlightPeople: Bool { didSet { defaults.set(highlightPeople, forKey: "highlightPeople"); onChange() } }
+    @Published var highlightDates: Bool { didSet { defaults.set(highlightDates, forKey: "highlightDates"); onChange() } }
+    @Published var highlightUrgent: Bool { didSet { defaults.set(highlightUrgent, forKey: "highlightUrgent"); onChange() } }
     /// La guida iniziale è stata vista (chiusa o finita).
     @Published var onboardingDone: Bool { didSet { defaults.set(onboardingDone, forKey: "onboardingDone") } }
     /// L'ultima versione di cui si sono viste le novità.
@@ -32,19 +37,46 @@ final class Preferences: ObservableObject {
         }
     }
 
+    func highlights(_ kind: EntityKind) -> Bool {
+        switch kind {
+        case .project: highlightProjects
+        case .person: highlightPeople
+        case .date: highlightDates
+        case .urgent: highlightUrgent
+        }
+    }
+
+    /// Per il file di configurazione.
+    var highlightMap: [String: Bool] {
+        [EntityKind.project.rawValue: highlightProjects, EntityKind.person.rawValue: highlightPeople,
+         EntityKind.date.rawValue: highlightDates, EntityKind.urgent.rawValue: highlightUrgent]
+    }
+
+    func setHighlights(_ map: [String: Bool]) {
+        if let v = map[EntityKind.project.rawValue] { highlightProjects = v }
+        if let v = map[EntityKind.person.rawValue] { highlightPeople = v }
+        if let v = map[EntityKind.date.rawValue] { highlightDates = v }
+        if let v = map[EntityKind.urgent.rawValue] { highlightUrgent = v }
+    }
+
     /// Chiamato dopo ogni cambio che tocca menu, scorciatoia, icona o schede.
     var onChange: () -> Void = {}
 
     init() {
         let d = UserDefaults.standard
         d.register(defaults: ["hotKeyEnabled": true, "menuBarIcon": true, "eveningHour": 17, "cardsOnTop": false,
-                              "useAppleIntelligence": true, "autoCheckUpdates": true])
+                              "useAppleIntelligence": true, "autoCheckUpdates": true, "highlightProjects": true,
+                              "highlightPeople": true, "highlightDates": true, "highlightUrgent": true])
         hotKeyEnabled = d.bool(forKey: "hotKeyEnabled")
         menuBarIcon = d.bool(forKey: "menuBarIcon")
         eveningHour = d.integer(forKey: "eveningHour")
         cardsOnTop = d.bool(forKey: "cardsOnTop")
         useAppleIntelligence = d.bool(forKey: "useAppleIntelligence")
         autoCheckUpdates = d.bool(forKey: "autoCheckUpdates")
+        highlightProjects = d.bool(forKey: "highlightProjects")
+        highlightPeople = d.bool(forKey: "highlightPeople")
+        highlightDates = d.bool(forKey: "highlightDates")
+        highlightUrgent = d.bool(forKey: "highlightUrgent")
         onboardingDone = d.bool(forKey: "onboardingDone")
         language = AppLanguage(rawValue: d.string(forKey: "language") ?? "") ?? .system
         Localization.language = language

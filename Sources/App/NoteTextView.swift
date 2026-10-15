@@ -92,6 +92,8 @@ final class NoteTextView: NSTextView {
         if styledOnce, caret.length == 0, window?.firstResponder === self {
             keyed.removeAll { !seenKeys.contains($0.key) && $0.entity.range.upperBound == caret.location }
         }
+        // Si evidenzia solo ciò che è scelto in Impostazioni (o nella configurazione guidata).
+        keyed.removeAll { !model.prefs.highlights($0.entity.kind) }
         let found = keyed.map { $0.entity }
 
         storage.beginEditing()

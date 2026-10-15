@@ -28,6 +28,13 @@ Scrivi gli appunti come vengono. Concludi riunione (⌘Invio) chiede ad Apple In
 cima: sintesi, prossimo incontro, scadenze e to-do minimal con chi le fa. Le to-do finiscono in Oggi. Senza Apple
 Intelligence il riassunto si fa con le regole (righe numerate, nome tra parentesi).
 
+## Configura dalle tue note
+
+Archivio › Configura dalle tue note: incolli qualche pagina scritta come la scrivi di solito, SmartMemo propone cosa
+sono sigle e nomi, tu decidi (progetto, persona o cliente, niente) e scegli cosa evidenziare. Il testo non si salva.
+La configurazione resta sul Mac; puoi esportarla in un file tuo e importarla su un altro Mac. Gli esempi in questo
+repository sono inventati.
+
 ## Dove stanno le note
 
 File Markdown in `iCloud Drive/SmartMemo` (o `Documenti/SmartMemo` senza iCloud Drive): `To-do/2026-10-15.md`,

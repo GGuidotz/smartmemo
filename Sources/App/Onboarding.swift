@@ -172,6 +172,15 @@ struct OnboardingView: View {
                 ? L("Le note sono file Markdown in iCloud Drive › SmartMemo: le apri anche con altre app.")
                 : L("Le note sono file Markdown in Documenti › SmartMemo: le apri anche con altre app."))
             Tip(symbol: "cursorarrow.click.2", text: L("Clic destro su una parola sbagliata: non è una persona, è un progetto. SmartMemo impara."))
+            Button {
+                model.showSetup()
+            } label: {
+                Label(L("Configura dalle tue note…"), systemImage: "doc.text.magnifyingglass")
+            }
+            .buttonStyle(.glass)
+            .controlSize(.large)
+            .padding(.top, 4)
+            Footnote(L("Incolli qualche pagina delle tue note e decidi tu cosa è progetto, cosa è persona e cosa evidenziare. Resta tutto sul Mac."))
             Tip(symbol: "gearshape", text: L("Impostazioni (⌘,): Apple Intelligence, aggiornamenti, note di rilascio e feedback."))
         }
     }

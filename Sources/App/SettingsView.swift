@@ -101,7 +101,7 @@ struct SettingsView: View {
             switch model.settingsTab {
             case .general: GeneralSettings(model: model, prefs: prefs)
             case .intelligence: IntelligenceSettings(prefs: prefs)
-            case .learned: LearnedSettings(model: model)
+            case .learned: LearnedSettings(model: model, prefs: prefs)
             case .updates: UpdatesSettings(updater: model.updater, prefs: prefs)
             case .feedback: FeedbackSettings(model: model)
             }
@@ -308,9 +308,30 @@ struct Tip: View {
 
 private struct LearnedSettings: View {
     @ObservedObject var model: AppModel
+    @ObservedObject var prefs: Preferences
+    @State private var exportMessage: String?
 
     var body: some View {
         Form {
+            Section {
+                HStack {
+                    Button(L("Configura dalle tue note…")) { model.showSetup() }
+                    Button(L("Esporta configurazione…")) {
+                        exportMessage = ConfigurationFile.export(model.knowledge, prefs: model.prefs)
+                    }
+                }
+                if let exportMessage { Footnote(exportMessage) }
+            } footer: {
+                Footnote(L("Parti da qualche pagina delle tue note e decidi cosa è progetto, cosa è persona e cosa evidenziare. Tutto resta su questo Mac; l'esportazione è un file tuo, per un altro Mac o per ripartire da lì."))
+            }
+            Section {
+                Toggle(L("Progetti"), isOn: $prefs.highlightProjects)
+                Toggle(L("Persone e clienti"), isOn: $prefs.highlightPeople)
+                Toggle(L("Date e orari"), isOn: $prefs.highlightDates)
+                Toggle(L("URGENTE"), isOn: $prefs.highlightUrgent)
+            } header: {
+                Text(L("Evidenzia mentre scrivi"))
+            }
             Section {
                 if model.knowledge.projects.isEmpty {
                     Text(L("Nessun progetto ancora. Scrivi una sigla seguita dai due punti, come SITO:")).foregroundStyle(.secondary)

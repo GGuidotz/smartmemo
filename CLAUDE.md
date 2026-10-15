@@ -27,4 +27,7 @@ Piano: progetto AppDevelop, `app-note/piano-smartmemo.md`.
   Rilascio: `./release.sh` sul Mac di Giulio (DMG, release GitHub, cask nel tap).
 - Design: Human Interface Guidelines (skill apple-design). Colore mai come unico segnale, colori di sistema, Liquid
   Glass solo su ciò che galleggia (pannello rapido, barre delle schede, pulsanti in fondo alle schede). Interfaccia in italiano e inglese, niente emoji.
+- Mai dati reali di Giulio (note, sigle, nomi, clienti) nel repository, che è pubblico: solo esempi inventati
+  (SITO, BANDO, LANCIO, #ALFA, Marta, Nexa, Studio Rossi, Luca). La sua configurazione la carica lui sul Mac con
+  "Configura dalle tue note" (`SetupWizard.swift`, `SetupAnalyzer.swift`), o da un file esportato che resta suo.
 - Riservato: nessun servizio esterno, nessuna AI fuori dal Mac (le note sono di lavoro, con dati di clienti).
