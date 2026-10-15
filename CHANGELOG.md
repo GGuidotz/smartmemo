@@ -3,7 +3,7 @@
 Formato: `## <versione> · <data>`, poi `### Novità`, `### Miglioramenti`, `### Correzioni`, una riga `- ` per
 cambiamento. release.sh usa la sezione della versione come note della release.
 
-## 0.1.0 · 2026-10-14
+## 0.1.0 · 2026-10-15
 
 La prima versione: to-do e riunioni che si capiscono mentre le scrivi, in schede piccole da tenere accanto al lavoro.
 
