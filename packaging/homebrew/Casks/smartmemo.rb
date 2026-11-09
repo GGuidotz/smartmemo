@@ -19,11 +19,12 @@ cask "smartmemo" do
 
   app "SmartMemo.app"
 
-  postflight do
+  postflight_steps do
     # L'app non è notarizzata (niente account Apple Developer): togliere la quarantena evita "Apri comunque".
-    system_command "/usr/bin/xattr",
-                   args:         ["-dr", "com.apple.quarantine", "#{appdir}/SmartMemo.app"],
-                   must_succeed: false
+    run "/usr/bin/xattr",
+        args:           ["-dr", "com.apple.quarantine", "{{appdir}}/SmartMemo.app"],
+        writable_paths: ["{{appdir}}/SmartMemo.app"],
+        must_succeed:   false
   end
 
   uninstall quit: "local.smartmemo.app"
