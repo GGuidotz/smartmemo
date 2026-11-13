@@ -46,6 +46,28 @@ enum Theme {
         return p
     }
 
+    /// Una voce di elenco: le righe a capo stanno sotto il testo, non sotto il segno.
+    static func listParagraph(headIndent: CGFloat) -> NSParagraphStyle {
+        let p = paragraph.mutableCopy() as! NSMutableParagraphStyle
+        p.firstLineHeadIndent = 0
+        p.headIndent = headIndent
+        return p
+    }
+
+    /// I numeri degli elenchi: cifre tutte larghe uguali, così i numeri si allineano.
+    static var numberFont: NSFont { .monospacedDigitSystemFont(ofSize: bodySize, weight: .regular) }
+
+    /// "# " è un titolo grande, "## " uno medio; altrimenti nil.
+    static func headingLevel(of line: String) -> Int? {
+        if line.hasPrefix("# ") { return 1 }
+        if line.hasPrefix("## ") { return 2 }
+        return nil
+    }
+
+    static func headingFont(_ level: Int) -> NSFont {
+        .systemFont(ofSize: level == 1 ? bodySize + 5 : bodySize + 2, weight: .semibold)
+    }
+
     static var baseAttributes: [NSAttributedString.Key: Any] {
         [.font: bodyFont, .foregroundColor: NSColor.labelColor, .paragraphStyle: paragraph]
     }

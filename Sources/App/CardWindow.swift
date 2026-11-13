@@ -16,6 +16,8 @@ final class CardState: ObservableObject {
 
     @Published private(set) var onTop: Bool
     @Published private(set) var busy = false
+    /// Cosa sta facendo l'app mentre `busy` (riassunto o punteggiatura).
+    @Published private(set) var busyText: String?
     @Published var message: String?
     @Published private(set) var hasSummary = false
     @Published private(set) var openCount = 0
@@ -61,6 +63,7 @@ final class CardState: ObservableObject {
     func conclude(model: AppModel) {
         guard let tv = textView, !busy else { return }
         busy = true
+        busyText = nil
         message = nil
         let text = tv.string
         let useAI = model.prefs.useAppleIntelligence
@@ -76,6 +79,85 @@ final class CardState: ObservableObject {
                 self.message = Intelligence.unavailableReason
             }
             self.textChanged(tv.string)
+        }
+    }
+
+    // MARK: Punteggiatura
+
+    /// ⌥⌘P: la punteggiatura della selezione (o di tutta la nota, senza il riassunto) sistemata da Apple Intelligence sul
+    /// Mac. Cambia solo punteggiatura e maiuscole: una riga con parole diverse resta com'era. Si annulla con ⌘Z.
+    func fixPunctuation(model: AppModel) {
+        guard let tv = textView, !busy else { return }
+        guard model.prefs.useAppleIntelligence else {
+            message = L("Apple Intelligence è spenta nelle Impostazioni: la punteggiatura si sistema con lei.")
+            return
+        }
+        if let reason = Intelligence.unavailableReason {
+            message = reason
+            return
+        }
+        let text = tv.string
+        let ns = text as NSString
+        var target = tv.selectedRange()
+        if target.length == 0 {
+            target = NSRange(location: 0, length: ns.length)
+        } else {
+            target = ns.lineRange(for: target)
+        }
+        // Il riassunto si salta: l'ha scritto già l'app.
+        let skip = document.kind == .meeting ? MeetingSummary.blockRange(in: text) : nil
+        var rows: [(range: NSRange, prefix: String, body: String)] = []
+        var location = target.location
+        while location < target.upperBound {
+            var lineEnd = 0, contentsEnd = 0
+            ns.getLineStart(nil, end: &lineEnd, contentsEnd: &contentsEnd, for: NSRange(location: location, length: 0))
+            let range = NSRange(location: location, length: contentsEnd - location)
+            location = lineEnd
+            if let skip, NSIntersectionRange(skip, range).length > 0 || skip.contains(range.location) { continue }
+            let line = ns.substring(with: range)
+            if line.trimmingCharacters(in: .whitespaces).isEmpty { continue }
+            let parts = PunctuationGuard.split(line)
+            let letters = parts.body.contains { $0.isLetter || $0.isNumber }
+            if letters, !TodoParser.isSeparator(line) { rows.append((range, parts.prefix, parts.body)) }
+        }
+        guard !rows.isEmpty else {
+            message = L("Non c'è niente da sistemare.")
+            return
+        }
+        busy = true
+        busyText = L("Sistemo la punteggiatura…")
+        message = nil
+        let keepCase = document.kind == .todo
+        Task { @MainActor in
+            defer { self.busy = false; self.busyText = nil }
+            do {
+                let fixed = try await Intelligence.punctuate(rows.map(\.body))
+                guard let tv = self.textView, tv.string == text else {
+                    self.message = L("La nota è cambiata nel frattempo: riprova.")
+                    return
+                }
+                let merged = PunctuationGuard.merge(lines: rows.map { $0.prefix + $0.body }, fixed: fixed, keepInitialCase: keepCase)
+                // Un solo cambio, dalla prima all'ultima riga toccata, annullabile in un colpo.
+                var output = ""
+                var cursor = rows[0].range.location
+                var changed = 0
+                for (row, new) in zip(rows, merged) {
+                    output += ns.substring(with: NSRange(location: cursor, length: row.range.location - cursor))
+                    let old = ns.substring(with: row.range)
+                    if new != old { changed += 1 }
+                    output += new
+                    cursor = row.range.upperBound
+                }
+                guard changed > 0 else {
+                    self.message = L("La punteggiatura era già a posto.")
+                    return
+                }
+                let whole = NSRange(location: rows[0].range.location, length: cursor - rows[0].range.location)
+                tv.replace(range: whole, with: output, actionName: L("Sistema la punteggiatura"))
+                self.textChanged(tv.string)
+            } catch {
+                self.message = L("Apple Intelligence non ha risposto (%@).", error.localizedDescription)
+            }
         }
     }
 
@@ -131,8 +213,9 @@ final class CardWindows: NSObject, NSWindowDelegate {
 
     /// La puntina predefinita è cambiata nelle impostazioni: vale per tutte le schede aperte.
     func applyPreferences() {
-        for card in cards.values where card.state.onTop != model.prefs.cardsOnTop {
-            card.state.setOnTop(model.prefs.cardsOnTop)
+        for card in cards.values {
+            if card.state.onTop != model.prefs.cardsOnTop { card.state.setOnTop(model.prefs.cardsOnTop) }
+            card.state.textView?.applyWritingPreferences()
         }
     }
 
@@ -214,30 +297,54 @@ struct CardView: View {
     @ObservedObject var prefs: Preferences
     @ObservedObject var card: CardState
 
+    // Il testo sta sopra la barra, mai sotto: l'ultima riga non finisce dietro i pulsanti e gli angoli arrotondati
+    // della finestra restano liberi (margini più larghi del vecchio 12 × 10).
     var body: some View {
-        EditorView(model: model, card: card)
-            .safeAreaInset(edge: .bottom, spacing: 0) {
-                Group {
-                    switch card.document.kind {
-                    case .todo: todoBar
-                    case .meeting: meetingBar
-                    }
+        VStack(spacing: 0) {
+            EditorView(model: model, card: card)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            Divider()
+            Group {
+                switch card.document.kind {
+                case .todo: todoBar
+                case .meeting: meetingBar
                 }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 10)
             }
-            .background(Color(nsColor: .textBackgroundColor))
-            .frame(minWidth: 320, minHeight: 240)
+            .padding(.horizontal, 18)
+            .padding(.vertical, 12)
+        }
+        .background(Color(nsColor: .textBackgroundColor))
+        .frame(minWidth: 320, minHeight: 240)
+    }
+
+    /// Cosa sta facendo l'app, o l'ultimo avviso.
+    @ViewBuilder private var status: some View {
+        if card.busy {
+            ProgressView().controlSize(.small)
+            if let text = card.busyText {
+                Text(text).font(.callout).foregroundStyle(.secondary)
+            }
+        } else if let message = card.message {
+            Text(message)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(3)
+                .fixedSize(horizontal: false, vertical: true)
+        }
     }
 
     /// Pagina di to-do: quante ne restano e la vista Oggi.
     private var todoBar: some View {
         HStack(spacing: 10) {
-            Text(counts)
-                .font(.callout)
-                .foregroundStyle(.secondary)
-                .monospacedDigit()
-            Spacer()
+            if card.busy || card.message != nil {
+                status
+            } else {
+                Text(counts)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+            }
+            Spacer(minLength: 0)
             Button {
                 model.sidebar = .today
                 model.showMainWindow()
@@ -259,17 +366,13 @@ struct CardView: View {
     private var meetingBar: some View {
         let ai = prefs.useAppleIntelligence && Intelligence.isAvailable
         return HStack(spacing: 10) {
-            if card.busy {
+            if card.busy && card.busyText == nil {
                 ProgressView().controlSize(.small)
                 Text(ai ? L("Apple Intelligence sta riassumendo…") : L("Sto riassumendo…"))
                     .font(.callout)
                     .foregroundStyle(.secondary)
-            } else if let message = card.message {
-                Text(message)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(3)
-                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                status
             }
             Spacer(minLength: 0)
             GlassEffectContainer(spacing: 8) {

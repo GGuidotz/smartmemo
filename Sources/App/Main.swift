@@ -225,6 +225,9 @@ enum MainMenu {
         edit.addItem(.separator())
         let find = edit.addItem(withTitle: L("Trova…"), action: #selector(NSResponder.performTextFinderAction(_:)), keyEquivalent: "f")
         find.tag = NSTextFinder.Action.showFindInterface.rawValue
+        edit.addItem(.separator())
+        let punctuation = edit.addItem(withTitle: L("Sistema la punteggiatura"), action: #selector(NoteTextView.fixPunctuation(_:)), keyEquivalent: "p")
+        punctuation.keyEquivalentModifierMask = [.command, .option]
         main.addItem(submenu: edit, title: edit.title)
 
         let todo = NSMenu(title: L("To-do"))

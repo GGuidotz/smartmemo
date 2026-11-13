@@ -57,8 +57,10 @@ Dal codice, con Xcode o i Command Line Tools: `./build.sh --install`.
 
 - 0.1 To-do e riunioni in schede: apertura rapida, accensione, spunte, Oggi, riporto, progetti, Concludi riunione
   con Apple Intelligence, guida iniziale, aggiornamenti, feedback.
-- 0.2 Prossimo incontro in Calendario, persone collegate a Contatti.
-- 0.3 Integrazioni: importa ed esporta con Apple Notes, invia a Promemoria.
+- 0.2 Scrittura: elenchi automatici nelle riunioni, regole di punteggiatura, Sistema la punteggiatura con Apple
+  Intelligence, margini e barre delle schede.
+- 0.3 Prossimo incontro in Calendario, persone collegate a Contatti.
+- 0.4 Integrazioni: importa ed esporta con Apple Notes, invia a Promemoria.
 
 ## Feedback
 

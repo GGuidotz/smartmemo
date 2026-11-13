@@ -79,4 +79,50 @@ enum Intelligence {
         #endif
         return (fallback, nil)
     }
+
+    /// La punteggiatura di righe di appunti (spesso dettati): Apple Intelligence aggiunge virgole, punti e maiuscole senza
+    /// toccare le parole. Torna una riga per ogni riga data; quelle che il modello salta restano com'erano. Le righe
+    /// che cambiano parole le scarta chi chiama (`PunctuationGuard`). Solo sul Mac, niente rete.
+    static func punctuate(_ bodies: [String]) async throws -> [String] {
+        #if canImport(FoundationModels)
+        if #available(macOS 26.0, *) {
+            var result = bodies
+            // A pezzi di circa 2500 caratteri: il modello legge poche migliaia di parole.
+            var chunk: [Int] = []
+            var size = 0
+            var chunks: [[Int]] = []
+            for (i, body) in bodies.enumerated() {
+                if size + body.count > 2500, !chunk.isEmpty {
+                    chunks.append(chunk)
+                    chunk = []
+                    size = 0
+                }
+                chunk.append(i)
+                size += body.count
+            }
+            if !chunk.isEmpty { chunks.append(chunk) }
+
+            let session = LanguageModelSession(instructions: """
+                You add punctuation and capital letters to quick notes, often dictated. Never add, remove, reorder or \
+                translate words. Never merge or split lines. Keep names, numbers, dates, hashtags and codes exactly as \
+                written. Write in the language of the notes. Return every input line, keeping its number and the "|" \
+                separator, with no other text.
+                """)
+            let line = try NSRegularExpression(pattern: #"^\s*(\d+)\s*\|\s?(.*)$"#)
+            for indexes in chunks {
+                let prompt = indexes.enumerated().map { "\($0.offset + 1)|\(bodies[$0.element])" }.joined(separator: "\n")
+                let response = try await session.respond(to: "Notes:\n" + prompt, options: GenerationOptions(temperature: 0))
+                for row in response.content.components(separatedBy: .newlines) {
+                    let ns = row as NSString
+                    guard let m = line.firstMatch(in: row, range: NSRange(location: 0, length: ns.length)),
+                          let n = Int(ns.substring(with: m.range(at: 1))), n >= 1, n <= indexes.count else { continue }
+                    result[indexes[n - 1]] = ns.substring(with: m.range(at: 2))
+                }
+            }
+            diag(.intelligence, "punctuation fixed: \(bodies.count) lines")
+            return result
+        }
+        #endif
+        return bodies
+    }
 }

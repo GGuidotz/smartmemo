@@ -50,6 +50,11 @@ enum TodoParser {
     static let urgentRegex = try! NSRegularExpression(
         pattern: #"(?<![\p{L}])(?:URGENTE|(?i:urgente)(?=!))!*(?![\p{L}])"#)
 
+    /// Una riga di tre o più trattini (o simili): chiude il blocco di un progetto.
+    static func isSeparator(_ line: String) -> Bool {
+        separatorRegex.firstMatch(in: line, range: NSRange(location: 0, length: (line as NSString).length)) != nil
+    }
+
     /// Parole che non sono sigle anche se stanno prima dei due punti.
     private static let notSigla: Set<String> = ["URGENTE", "Nota", "Note", "NB", "PS", "Oggi", "Domani", "Ore", "Re", "Fw", "Fwd"]
 

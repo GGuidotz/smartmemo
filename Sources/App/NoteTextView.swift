@@ -8,12 +8,16 @@
 // Nelle pagine di to-do: un cerchio a sinistra di ogni to-do (clic o ⌘K per spuntarla), e Invio divide la riga alle
 // virgole dove comincia un'altra azione. Nelle riunioni sono to-do le righe con la casella "- [ ] " (la casella si
 // nasconde e diventa il cerchio), e il riassunto in cima diventa un riquadro con le sue to-do.
+// Scrittura: regole a ogni tasto (niente spazio prima della punteggiatura, ". " dal doppio spazio, maiuscola a inizio
+// frase nelle riunioni; Indietro le annulla subito) e, nelle riunioni, elenchi Markdown: "- " e "1. " continuano con
+// Invio, Tab annida, i numeri si rinumerano. La logica sta in Sources/Core (ListEditing, TypingRules).
 // TextKit 1: serve la posizione esatta di ogni parola per disegnare.
 
 import AppKit
 
 final class NoteTextView: NSTextView {
     weak var model: AppModel?
+    weak var card: CardState?
     var kind: NoteKind = .todo
 
     private(set) var lines: [ParsedLine] = []
@@ -25,7 +29,17 @@ final class NoteTextView: NSTextView {
     /// Le righe del riassunto (senza i commenti che lo aprono e lo chiudono), se la riunione ne ha uno.
     private var summaryContent: NSRange?
     private var summaryByAI = false
+    /// I trattini degli elenchi, disegnati come pallini (il carattere resta nel file ma non si vede).
+    private var bulletRanges: [NSRange] = []
+    /// L'ultima correzione fatta da sola, per annullarla con Indietro.
+    private var lastAutoEdit: AutoEdit?
     private static let boldRegex = try! NSRegularExpression(pattern: #"(\*\*)(.+?)(\*\*)"#)
+
+    private struct AutoEdit {
+        /// Dove sta il testo messo dalla regola (dopo la modifica) e cosa c'era scritto davvero.
+        var range: NSRange
+        var typed: String
+    }
 
     private struct Glow {
         var range: NSRange
@@ -33,7 +47,11 @@ final class NoteTextView: NSTextView {
         var start: TimeInterval
     }
 
-    static let gutter: CGFloat = 38
+    /// Il margine a destra e a sinistra: abbastanza largo per il cerchio delle to-do, lontano dagli angoli arrotondati.
+    static let gutter: CGFloat = 44
+    static let verticalInset: CGFloat = 24
+    /// Oltre questa larghezza il testo resta in colonna, al centro.
+    static let maxTextWidth: CGFloat = 700
 
     func configure() {
         isRichText = false
@@ -47,11 +65,35 @@ final class NoteTextView: NSTextView {
         isContinuousSpellCheckingEnabled = true
         drawsBackground = true
         backgroundColor = .textBackgroundColor
-        textContainerInset = NSSize(width: Self.gutter, height: 22)
+        textContainerInset = NSSize(width: Self.gutter, height: Self.verticalInset)
         font = Theme.bodyFont
         textColor = .labelColor
         typingAttributes = Theme.baseAttributes
         setAccessibilityLabel(L("Testo della nota"))
+        applyWritingPreferences()
+    }
+
+    /// Correzione di macOS e parole da non correggere (sigle e persone che SmartMemo conosce).
+    func applyWritingPreferences() {
+        guard let prefs = model?.prefs else { return }
+        isAutomaticSpellingCorrectionEnabled = prefs.systemAutocorrect
+        isAutomaticTextReplacementEnabled = prefs.textReplacements
+        updateIgnoredWords()
+    }
+
+    func updateIgnoredWords() {
+        guard let knowledge = model?.knowledge else { return }
+        NSSpellChecker.shared.setIgnoredWords(knowledge.projects + knowledge.people,
+                                              inSpellDocumentWithTag: spellCheckerDocumentTag)
+    }
+
+    /// Il testo resta in colonna sulle finestre larghe.
+    override func setFrameSize(_ newSize: NSSize) {
+        super.setFrameSize(newSize)
+        let side = max(Self.gutter, (newSize.width - Self.maxTextWidth) / 2)
+        if abs(textContainerInset.width - side) > 0.5 {
+            textContainerInset = NSSize(width: side, height: Self.verticalInset)
+        }
     }
 
     /// Un documento nuovo: niente accensioni per ciò che c'è già.
@@ -120,6 +162,7 @@ final class NoteTextView: NSTextView {
             }
         }
         styleSummary(storage)
+        styleBlocks(storage)
         for e in found {
             let done = doneRanges.contains { NSIntersectionRange($0, e.range).length > 0 }
             storage.addAttributes(Theme.attributes(for: e, done: done), range: e.range)
@@ -137,6 +180,43 @@ final class NoteTextView: NSTextView {
         styledOnce = true
         entities = found
         needsDisplay = true
+    }
+
+    /// Nelle riunioni: titoli (# e ##) più grandi, elenchi con il rientro "appeso" (le righe a capo stanno sotto il testo),
+    /// pallini al posto dei trattini e numeri in grigio. Il riassunto ha un suo stile e non si tocca.
+    private func styleBlocks(_ storage: NSTextStorage) {
+        bulletRanges = []
+        guard kind == .meeting else { return }
+        let ns = storage.string as NSString
+        for line in lines where line.kind != .blank && line.kind != .separator {
+            if let summaryContent, NSIntersectionRange(summaryContent, line.range).length > 0 { continue }
+            let text = ns.substring(with: line.range)
+            let paragraph = ns.lineRange(for: NSRange(location: line.range.location, length: 0))
+            if let marker = ListMarker.parse(text) {
+                let indentLength = (marker.indent as NSString).length
+                let signRange = NSRange(location: line.range.location + indentLength, length: marker.length - indentLength)
+                // La casella "- [ ] " non si vede (c'è il cerchio): conta solo il rientro.
+                var isBox = false
+                if case .box = marker.kind { isBox = true }
+                let lead = (isBox ? marker.indent : (text as NSString).substring(to: marker.length)) as NSString
+                let width = lead.size(withAttributes: [.font: Theme.bodyFont]).width
+                storage.addAttribute(.paragraphStyle, value: Theme.listParagraph(headIndent: width), range: paragraph)
+                switch marker.kind {
+                case .bullet:
+                    let dash = NSRange(location: signRange.location, length: 1)
+                    storage.addAttribute(.foregroundColor, value: NSColor.clear, range: dash)
+                    bulletRanges.append(dash)
+                case .number:
+                    storage.addAttributes([.foregroundColor: NSColor.secondaryLabelColor, .font: Theme.numberFont], range: signRange)
+                case .box:
+                    break
+                }
+            } else if let level = Theme.headingLevel(of: text) {
+                storage.addAttribute(.font, value: Theme.headingFont(level), range: line.range)
+                storage.addAttribute(.foregroundColor, value: NSColor.tertiaryLabelColor,
+                                     range: NSRange(location: line.range.location, length: level))
+            }
+        }
     }
 
     /// Il riassunto di una riunione: i commenti che lo aprono e lo chiudono spariscono, i titoletti tra ** vanno in
@@ -180,6 +260,23 @@ final class NoteTextView: NSTextView {
         restyle()
     }
 
+    /// Sostituisce una parte del testo in una volta sola, annullabile con ⌘Z, e la lascia selezionata.
+    func replace(range: NSRange, with text: String, actionName: String) {
+        guard range.upperBound <= (string as NSString).length, shouldChangeText(in: range, replacementString: text) else { return }
+        breakUndoCoalescing()
+        textStorage?.replaceCharacters(in: range, with: text)
+        didChangeText()
+        undoManager?.setActionName(actionName)
+        setSelectedRange(NSRange(location: range.location, length: (text as NSString).length))
+        restyle()
+    }
+
+    /// ⌥⌘P: sistema la punteggiatura della selezione o di tutta la nota con Apple Intelligence (sul Mac).
+    @objc func fixPunctuation(_ sender: Any?) {
+        guard let model else { return }
+        card?.fixPunctuation(model: model)
+    }
+
     /// L'accensione del riassunto appena scritto.
     func glowSummary() {
         guard let summaryContent else { return }
@@ -210,6 +307,14 @@ final class NoteTextView: NSTextView {
                 path.stroke()
             }
         }
+        for dash in bulletRanges {
+            let r = tokenRect(dash)
+            guard r.width > 0, r.intersects(rect) else { continue }
+            let d: CGFloat = 5
+            let dot = NSRect(x: r.minX + 1, y: r.midY - d / 2 + 0.5, width: d, height: d)
+            NSColor.secondaryLabelColor.setFill()
+            NSBezierPath(ovalIn: dot).fill()
+        }
         for line in lines where line.kind == .task {
             let box = checkRect(line)
             if box.intersects(rect) { drawCheck(in: box, done: line.done, urgent: line.urgent) }
@@ -226,12 +331,14 @@ final class NoteTextView: NSTextView {
                 + L("Progetti, persone e date si evidenziano da soli. Invio divide la riga alle virgole.")
         case .meeting:
             text = L("Scrivi gli appunti della riunione. Persone, date e #progetti si evidenziano da soli.")
+                + "\n\n" + L("Con \"- \" o \"1. \" cominci un elenco: Invio lo continua, Tab lo annida.")
         }
         let attrs: [NSAttributedString.Key: Any] = [.font: Theme.bodyFont, .foregroundColor: NSColor.placeholderTextColor,
                                                     .paragraphStyle: Theme.paragraph]
         let origin = textContainerOrigin
-        let width = bounds.width - origin.x * 2
-        (text as NSString).draw(with: NSRect(x: origin.x + 5, y: origin.y, width: max(width, 100), height: 400),
+        let padding = textContainer?.lineFragmentPadding ?? 5
+        let width = (textContainer?.size.width ?? bounds.width - origin.x * 2) - padding * 2
+        (text as NSString).draw(with: NSRect(x: origin.x + padding, y: origin.y, width: max(width, 100), height: 1000),
                                 options: [.usesLineFragmentOrigin], attributes: attrs, context: nil)
     }
 
@@ -244,7 +351,9 @@ final class NoteTextView: NSTextView {
         let lastGlyph = lm.glyphIndexForCharacter(at: max(content.location, content.upperBound - 1))
         let top = lm.lineFragmentRect(forGlyphAt: firstGlyph, effectiveRange: nil).minY + origin.y
         let bottom = lm.lineFragmentRect(forGlyphAt: lastGlyph, effectiveRange: nil).maxY + origin.y
-        let box = NSRect(x: 6, y: top, width: bounds.width - 12, height: bottom - top).insetBy(dx: 0, dy: -2)
+        // Più dentro dei bordi della finestra, lontano dagli angoli arrotondati.
+        let margin = max(10, origin.x - 18)
+        let box = NSRect(x: margin, y: top, width: bounds.width - margin * 2, height: bottom - top).insetBy(dx: 0, dy: -2)
         guard box.intersects(dirty), box.width > 40 else { return }
         let shape = NSBezierPath(roundedRect: box, xRadius: 12, yRadius: 12)
         (summaryByAI ? NSColor.systemPurple : NSColor.controlAccentColor).withAlphaComponent(0.06).setFill()
@@ -392,6 +501,7 @@ final class NoteTextView: NSTextView {
 
     override func validateUserInterfaceItem(_ item: any NSValidatedUserInterfaceItem) -> Bool {
         if item.action == #selector(toggleDone(_:)) { return kind == .todo || lines.contains { $0.kind == .task } }
+        if item.action == #selector(fixPunctuation(_:)) { return card != nil && card?.busy == false }
         return super.validateUserInterfaceItem(item)
     }
 
@@ -422,11 +532,90 @@ final class NoteTextView: NSTextView {
         }
     }
 
-    // MARK: Invio divide alle virgole
+    // MARK: Scrittura
+
+    private var prefs: Preferences? { model?.prefs }
+
+    /// Ogni tasto: le regole di TypingRules (spazi, punto, maiuscola) con la modifica fatta in un colpo solo.
+    override func insertText(_ string: Any, replacementRange: NSRange) {
+        lastAutoEdit = nil
+        let typed = (string as? String) ?? (string as? NSAttributedString)?.string
+        if let typed, let prefs, replacementRange.location == NSNotFound, !hasMarkedText(), selectedRange().length == 0 {
+            let options = TypingOptions(spacing: prefs.autoPunctuation, capitalize: prefs.autoCapitalize)
+            if let edit = TypingRules.edit(in: self.string, caret: selectedRange().location, typed: typed, kind: kind, options: options) {
+                let replaced = (self.string as NSString).substring(with: edit.range)
+                super.insertText(edit.replacement, replacementRange: edit.range)
+                lastAutoEdit = AutoEdit(range: NSRange(location: edit.range.location, length: (edit.replacement as NSString).length),
+                                        typed: replaced + typed)
+                return
+            }
+        }
+        super.insertText(string, replacementRange: replacementRange)
+    }
+
+    /// Indietro subito dopo una correzione fatta da sola la annulla e rimette ciò che avevi scritto.
+    override func deleteBackward(_ sender: Any?) {
+        defer { lastAutoEdit = nil }
+        if let auto = lastAutoEdit, selectedRange() == NSRange(location: auto.range.upperBound, length: 0),
+           auto.range.upperBound <= (string as NSString).length {
+            breakUndoCoalescing()
+            guard shouldChangeText(in: auto.range, replacementString: auto.typed) else { return }
+            textStorage?.replaceCharacters(in: auto.range, with: auto.typed)
+            didChangeText()
+            setSelectedRange(NSRange(location: auto.range.location + (auto.typed as NSString).length, length: 0))
+            return
+        }
+        super.deleteBackward(sender)
+    }
+
+    // MARK: Invio, elenchi e virgole
+
+    private var listsActive: Bool { kind == .meeting && prefs?.autoLists == true && !hasMarkedText() }
+
+    /// Una modifica degli elenchi, con i numeri a posto, annullabile in un colpo solo.
+    private func perform(_ edit: TextEdit, caretAfterEdit: Int, actionName: String, selectsBlock: Bool = false) {
+        let resolved = ListEditing.resolve(edit, in: string, caretAfterEdit: caretAfterEdit)
+        breakUndoCoalescing()
+        guard shouldChangeText(in: resolved.edit.range, replacementString: resolved.edit.replacement) else { return }
+        textStorage?.replaceCharacters(in: resolved.edit.range, with: resolved.edit.replacement)
+        didChangeText()
+        undoManager?.setActionName(actionName)
+        if selectsBlock {
+            setSelectedRange(NSRange(location: resolved.edit.range.location, length: (resolved.edit.replacement as NSString).length))
+        } else {
+            setSelectedRange(NSRange(location: resolved.caret, length: 0))
+        }
+        scrollRangeToVisible(selectedRange())
+    }
 
     override func insertNewline(_ sender: Any?) {
+        lastAutoEdit = nil
+        if listsActive, let edit = ListEditing.newline(in: string, selection: selectedRange()) {
+            perform(edit, caretAfterEdit: edit.caretAfter, actionName: L("Elenco"))
+            return
+        }
         if kind == .todo { splitLineAtCaret() }
         super.insertNewline(sender)
+    }
+
+    override func insertTab(_ sender: Any?) {
+        if listsActive, shiftList(deeper: true) { return }
+        super.insertTab(sender)
+    }
+
+    override func insertBacktab(_ sender: Any?) {
+        if listsActive, shiftList(deeper: false) { return }
+        super.insertBacktab(sender)
+    }
+
+    /// Tab e Maiusc-Tab sulle voci di elenco: annida o porta fuori, rinumerando.
+    private func shiftList(deeper: Bool) -> Bool {
+        lastAutoEdit = nil
+        let selection = selectedRange()
+        guard let edit = ListEditing.shift(in: string, selection: selection, deeper: deeper) else { return false }
+        let caret = ListEditing.mapCaret(selection.location, from: string, to: edit.applied(to: string))
+        perform(edit, caretAfterEdit: caret, actionName: deeper ? L("Rientra") : L("Porta fuori"), selectsBlock: selection.length > 0)
+        return true
     }
 
     private func splitLineAtCaret() {
@@ -474,6 +663,8 @@ final class NoteTextView: NSTextView {
             items.append(correctionItem(L("“%@” è una persona", word), .person(word)))
             items.append(correctionItem(L("“%@” è un progetto", word), .project(word)))
         }
+        menu.addItem(.separator())
+        menu.addItem(NSMenuItem(title: L("Sistema la punteggiatura"), action: #selector(fixPunctuation(_:)), keyEquivalent: ""))
         guard !items.isEmpty else { return menu }
         menu.insertItem(.separator(), at: 0)
         for item in items.reversed() { menu.insertItem(item, at: 0) }
