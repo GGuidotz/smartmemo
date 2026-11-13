@@ -98,8 +98,10 @@ struct QuickChooser: View {
                 .foregroundStyle(.secondary)
                 .font(.callout)
         }
-        .padding(20)
-        .glassEffect(.regular, in: .rect(cornerRadius: 26))
+        .padding(22)
+        .glassEffect(.regular, in: .rect(cornerRadius: 28))
+        // Margine trasparente attorno al vetro: il bordo e l'ombra non vengono tagliati dal pannello.
+        .padding(24)
         .fixedSize()
     }
 
@@ -111,6 +113,8 @@ struct QuickChooser: View {
                     .frame(height: 36)
                 Text(kind.newTitle)
                     .font(.headline)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
                 Text(hint)
                     .font(.caption.monospaced().weight(.semibold))
                     .foregroundStyle(.secondary)

@@ -19,8 +19,9 @@ struct EditorView: NSViewRepresentable {
         scroll.borderType = .noBorder
 
         let text = NoteTextView(usingTextLayoutManager: false)
-        text.configure()
         text.model = model
+        text.card = card
+        text.configure()
         text.delegate = context.coordinator
         text.minSize = .zero
         text.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
@@ -91,6 +92,7 @@ struct EditorView: NSViewRepresentable {
             }
             if model.knowledgeVersion != seenKnowledge {
                 seenKnowledge = model.knowledgeVersion
+                textView?.updateIgnoredWords()
                 textView?.restyle()
             }
         }

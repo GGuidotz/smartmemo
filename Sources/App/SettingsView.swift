@@ -1,4 +1,4 @@
-// Le impostazioni, in cinque schede: Generale, Apple Intelligence, Progetti e persone, Aggiornamenti (con le note di
+// Le impostazioni, in sei schede: Generale, Scrittura, Apple Intelligence, Progetti e persone, Aggiornamenti (con le note di
 // rilascio) e Feedback. Una finestra AppKit con dentro SwiftUI, perché l'avvio è AppKit. Barra del titolo trasparente:
 // la barra delle schede è di vetro e galleggia sopra il contenuto, il fondo è il materiale delle barre laterali.
 // Stesso schema di What's Going On. HIG, Impostazioni: poche scelte, ognuna spiegata sotto.
@@ -8,12 +8,13 @@ import ServiceManagement
 import SwiftUI
 
 enum SettingsTab: String, CaseIterable, Identifiable {
-    case general, intelligence, learned, updates, feedback
+    case general, writing, intelligence, learned, updates, feedback
     var id: String { rawValue }
 
     var title: String {
         switch self {
         case .general: L("Generale")
+        case .writing: L("Scrittura")
         case .intelligence: L("Apple Intelligence")
         case .learned: L("Progetti e persone")
         case .updates: L("Aggiornamenti")
@@ -24,6 +25,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
     var symbol: String {
         switch self {
         case .general: "gearshape"
+        case .writing: "character.cursor.ibeam"
         case .intelligence: "sparkles"
         case .learned: "person.crop.rectangle.stack"
         case .updates: "arrow.down.circle"
@@ -100,6 +102,7 @@ struct SettingsView: View {
         Group {
             switch model.settingsTab {
             case .general: GeneralSettings(model: model, prefs: prefs)
+            case .writing: WritingSettings(prefs: prefs)
             case .intelligence: IntelligenceSettings(prefs: prefs)
             case .learned: LearnedSettings(model: model, prefs: prefs)
             case .updates: UpdatesSettings(updater: model.updater, prefs: prefs)
@@ -119,7 +122,7 @@ struct SettingsView: View {
     }
 }
 
-/// La barra delle schede: un controllo che galleggia, quindi di vetro. ⌘1…⌘5 per passare da una scheda all'altra.
+/// La barra delle schede: un controllo che galleggia, quindi di vetro. ⌘1…⌘6 per passare da una scheda all'altra.
 private struct SettingsTabBar: View {
     @Binding var selection: SettingsTab
 
@@ -140,7 +143,7 @@ private struct SettingsTabBar: View {
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.75)
                         }
-                        .frame(width: 104, height: 44)
+                        .frame(width: 92, height: 44)
                         .foregroundStyle(selected ? Color.accentColor : Color.secondary)
                         .background {
                             if selected {
@@ -240,6 +243,49 @@ private struct GeneralSettings: View {
         } catch {
             loginError = L("Non riesco a cambiare l'apertura all'accesso: %@", error.localizedDescription)
             launchAtLogin = SMAppService.mainApp.status == .enabled
+        }
+    }
+}
+
+// MARK: - Scrittura
+
+private struct WritingSettings: View {
+    @ObservedObject var prefs: Preferences
+
+    var body: some View {
+        Form {
+            Section {
+                Toggle(L("Punteggiatura mentre scrivi"), isOn: $prefs.autoPunctuation)
+                Toggle(L("Maiuscola a inizio frase (riunioni)"), isOn: $prefs.autoCapitalize)
+            } header: {
+                Text(L("Regole di scrittura"))
+            } footer: {
+                Footnote(L("Niente spazio prima di virgola, punto e due punti; due spazi diventano un punto. Indietro, subito dopo, annulla la correzione. Nelle to-do la maiuscola non c'è: si comincia con un verbo."))
+            }
+
+            Section {
+                Toggle(L("Elenchi automatici (riunioni)"), isOn: $prefs.autoLists)
+            } header: {
+                Text(L("Elenchi"))
+            } footer: {
+                Footnote(L("Scrivi \"- \" o \"1. \" a inizio riga: Invio continua l'elenco, Invio su una voce vuota lo chiude, Tab annida e i numeri si aggiornano da soli. Il file resta Markdown."))
+            }
+
+            Section {
+                Toggle(L("Correzione automatica di macOS"), isOn: $prefs.systemAutocorrect)
+                Toggle(L("Sostituzioni di testo di macOS"), isOn: $prefs.textReplacements)
+            } header: {
+                Text(L("Correzione di macOS"))
+            } footer: {
+                Footnote(L("Le sigle dei progetti e i nomi che SmartMemo conosce non vengono corretti. Le sostituzioni sono quelle di Impostazioni di Sistema › Tastiera."))
+            }
+
+            Section {
+                Tip(symbol: "text.badge.checkmark", text: L("Sistema la punteggiatura (⌥⌘P, o clic destro) aggiunge virgole, punti e maiuscole a un testo dettato, sulla selezione o su tutta la nota."))
+                Tip(symbol: "lock", text: L("Lo fa Apple Intelligence sul Mac, senza rete: cambia solo la punteggiatura, mai le parole. ⌘Z annulla."))
+            } header: {
+                Text(L("Punteggiatura con Apple Intelligence"))
+            }
         }
     }
 }

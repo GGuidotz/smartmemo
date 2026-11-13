@@ -22,6 +22,16 @@ final class Preferences: ObservableObject {
     @Published var highlightPeople: Bool { didSet { defaults.set(highlightPeople, forKey: "highlightPeople"); onChange() } }
     @Published var highlightDates: Bool { didSet { defaults.set(highlightDates, forKey: "highlightDates"); onChange() } }
     @Published var highlightUrgent: Bool { didSet { defaults.set(highlightUrgent, forKey: "highlightUrgent"); onChange() } }
+    /// Scrittura: niente spazio prima della punteggiatura e due spazi diventano ". ".
+    @Published var autoPunctuation: Bool { didSet { defaults.set(autoPunctuation, forKey: "autoPunctuation"); onChange() } }
+    /// Scrittura: maiuscola a inizio frase nelle riunioni.
+    @Published var autoCapitalize: Bool { didSet { defaults.set(autoCapitalize, forKey: "autoCapitalize"); onChange() } }
+    /// Scrittura: "- " e "1. " aprono un elenco nelle riunioni, Invio lo continua.
+    @Published var autoLists: Bool { didSet { defaults.set(autoLists, forKey: "autoLists"); onChange() } }
+    /// Scrittura: correzione ortografica automatica di macOS.
+    @Published var systemAutocorrect: Bool { didSet { defaults.set(systemAutocorrect, forKey: "systemAutocorrect"); onChange() } }
+    /// Scrittura: sostituzioni di testo di macOS (Impostazioni di Sistema › Tastiera).
+    @Published var textReplacements: Bool { didSet { defaults.set(textReplacements, forKey: "textReplacements"); onChange() } }
     /// La guida iniziale è stata vista (chiusa o finita).
     @Published var onboardingDone: Bool { didSet { defaults.set(onboardingDone, forKey: "onboardingDone") } }
     /// L'ultima versione di cui si sono viste le novità.
@@ -66,7 +76,9 @@ final class Preferences: ObservableObject {
         let d = UserDefaults.standard
         d.register(defaults: ["hotKeyEnabled": true, "menuBarIcon": true, "eveningHour": 17, "cardsOnTop": false,
                               "useAppleIntelligence": true, "autoCheckUpdates": true, "highlightProjects": true,
-                              "highlightPeople": true, "highlightDates": true, "highlightUrgent": true])
+                              "highlightPeople": true, "highlightDates": true, "highlightUrgent": true,
+                              "autoPunctuation": true, "autoCapitalize": true, "autoLists": true,
+                              "systemAutocorrect": true, "textReplacements": true])
         hotKeyEnabled = d.bool(forKey: "hotKeyEnabled")
         menuBarIcon = d.bool(forKey: "menuBarIcon")
         eveningHour = d.integer(forKey: "eveningHour")
@@ -77,6 +89,11 @@ final class Preferences: ObservableObject {
         highlightPeople = d.bool(forKey: "highlightPeople")
         highlightDates = d.bool(forKey: "highlightDates")
         highlightUrgent = d.bool(forKey: "highlightUrgent")
+        autoPunctuation = d.bool(forKey: "autoPunctuation")
+        autoCapitalize = d.bool(forKey: "autoCapitalize")
+        autoLists = d.bool(forKey: "autoLists")
+        systemAutocorrect = d.bool(forKey: "systemAutocorrect")
+        textReplacements = d.bool(forKey: "textReplacements")
         onboardingDone = d.bool(forKey: "onboardingDone")
         language = AppLanguage(rawValue: d.string(forKey: "language") ?? "") ?? .system
         Localization.language = language

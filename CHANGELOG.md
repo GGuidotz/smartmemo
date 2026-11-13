@@ -3,6 +3,27 @@
 Formato: `## <versione> · <data>`, poi `### Novità`, `### Miglioramenti`, `### Correzioni`, una riga `- ` per
 cambiamento. release.sh usa la sezione della versione come note della release.
 
+## 0.2.0 · 2026-11-13
+
+Scrivere è più veloce: elenchi che si continuano da soli nelle riunioni, punteggiatura che si sistema mentre scrivi o con Apple Intelligence, e schede con i bordi in ordine.
+
+### Novità
+- Elenchi automatici nelle riunioni: scrivi `- ` o `1. ` a inizio riga e Invio continua l'elenco; Invio su una voce vuota lo chiude; Tab e Maiusc-Tab annidano e i numeri si aggiornano da soli. Una casella `- [ ] ` continua con una casella nuova. Il file resta Markdown puro.
+- Regole di scrittura: niente spazio prima di virgola, punto e due punti; due spazi diventano un punto; nelle riunioni la maiuscola a inizio frase (non dopo abbreviazioni come "es." o "ecc."). Indietro, subito dopo, annulla la correzione.
+- Sistema la punteggiatura (⌥⌘P, o clic destro): Apple Intelligence aggiunge virgole, punti e maiuscole a un testo dettato, sulla selezione o su tutta la nota. Cambia solo la punteggiatura, mai le parole; una riga con parole diverse resta com'era. Si annulla con ⌘Z. Tutto sul Mac.
+- Nuova scheda Scrittura nelle Impostazioni: regole, elenchi e correzione di macOS si accendono e si spengono una per una.
+- Correzione automatica e sostituzioni di testo di macOS nelle schede; le sigle dei progetti e i nomi che SmartMemo conosce non vengono corretti.
+
+### Miglioramenti
+- Titoli (`# ` e `## `) più grandi nelle riunioni; elenchi con pallini, numeri in grigio e righe a capo allineate al testo.
+- Il testo resta in colonna sulle finestre larghe.
+- La barra in fondo alle schede sta sotto il testo, non sopra, con margini più larghi; mostra anche i messaggi delle nuove funzioni.
+- Margini più larghi a destra e a sinistra: il cerchio delle to-do e il riquadro del riassunto stanno lontani dagli angoli arrotondati della finestra.
+
+### Correzioni
+- Il testo di esempio e il riquadro del riassunto si adattano alla larghezza vera della scheda.
+- Il pannello rapido ha un margine trasparente attorno al vetro: bordo e ombra non vengono più tagliati, e i titoli lunghi si riducono invece di troncarsi.
+
 ## 0.1.0 · 2026-10-15
 
 La prima versione: to-do e riunioni che si capiscono mentre le scrivi, in schede piccole da tenere accanto al lavoro.
