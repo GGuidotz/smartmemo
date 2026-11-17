@@ -6,6 +6,8 @@ Piano: progetto AppDevelop, `app-note/piano-smartmemo.md`.
 - Compilazione: `./build.sh` (swiftc diretto, niente progetto Xcode, `-swift-version 5`). Firma con l'identità locale
   di Nod (~/.nod-signing) se c'è, altrimenti ad hoc. Nel cloud Swift non compila: ogni modifica la prova Giulio sul Mac
   con `./build.sh --install`. Rileggi il codice con cura prima di consegnare.
+- Firma con hardened runtime (`--options runtime`) ed entitlement in `Resources/SmartMemo.entitlements`: da aggiornare
+  se l'app usa una risorsa nuova (microfono, calendari, ecc.). Oggi solo Automazione (apple-events) per l'Updater.
 - Controllo nel cloud: `pip install tree-sitter tree-sitter-swift`, poi `python3 -I tools/check-syntax.py`. Non
   sostituisce la compilazione.
 - `Sources/Core` solo Foundation (+ NaturalLanguage dietro `#if canImport`): parser delle to-do, riconoscimento,
