@@ -80,7 +80,8 @@ else
   codesign --force --options runtime --entitlements Resources/SmartMemo.entitlements --sign - "$APP"
 fi
 codesign --verify --strict "$APP"
-codesign -dv "$APP" 2>&1 | grep -q 'flags=.*runtime' || { echo "Manca l'hardened runtime"; exit 1; }
+SIGN_INFO="$(codesign -dv "$APP" 2>&1)"
+[[ "$SIGN_INFO" == *flags=*runtime* ]] || { echo "Manca l'hardened runtime"; exit 1; }
 echo "Pronto: $APP ($VERSION, build $BUILD_NUMBER, commit $COMMIT, firma $SIGNING)"
 
 case "$MODE" in
