@@ -74,12 +74,14 @@ KC="$HOME/.nod-signing/nod-signing.keychain"
 if [ -f "$KC" ]; then
   SIGNING=local
   security unlock-keychain -p nod "$KC"
-  codesign --force --keychain "$KC" --sign "Nod Local Signing" "$APP"
+  codesign --force --options runtime --entitlements Resources/SmartMemo.entitlements --keychain "$KC" --sign "Nod Local Signing" "$APP"
 else
   SIGNING=adhoc
-  codesign --force --sign - "$APP"
+  codesign --force --options runtime --entitlements Resources/SmartMemo.entitlements --sign - "$APP"
 fi
 codesign --verify --strict "$APP"
+SIGN_INFO="$(codesign -dv "$APP" 2>&1)"
+[[ "$SIGN_INFO" == *flags=*runtime* ]] || { echo "Manca l'hardened runtime"; exit 1; }
 echo "Pronto: $APP ($VERSION, build $BUILD_NUMBER, commit $COMMIT, firma $SIGNING)"
 
 case "$MODE" in

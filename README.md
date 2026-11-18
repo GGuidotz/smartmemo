@@ -43,6 +43,8 @@ File Markdown in `iCloud Drive/SmartMemo` (o `Documenti/SmartMemo` senza iCloud 
 Il riconoscimento e i riassunti girano tutti sul Mac (regole, NaturalLanguage e Apple Intelligence). Nessun servizio
 esterno: l'unica connessione è il controllo degli aggiornamenti, che legge il numero di versione da GitHub.
 
+Per sapere cosa si salva e dove, e come proteggere note con dati di clienti, vedi [PRIVACY.md](PRIVACY.md).
+
 ## Requisiti e installazione
 
 macOS 26 o successivo.

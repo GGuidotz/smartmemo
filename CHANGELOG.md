@@ -3,6 +3,15 @@
 Formato: `## <versione> · <data>`, poi `### Novità`, `### Miglioramenti`, `### Correzioni`, una riga `- ` per
 cambiamento. release.sh usa la sezione della versione come note della release.
 
+## 0.2.1 · 2026-11-17
+
+Più riservatezza: firma più stretta dell'app, configurazione leggibile solo da te e una pagina che spiega dove vanno i dati.
+
+### Miglioramenti
+- Firma più stretta (hardened runtime): macOS non accetta più che un altro programma inserisca codice dentro SmartMemo e usi i suoi permessi.
+- La configurazione di SmartMemo (sigle, nomi e clienti che conosce) è leggibile solo dal tuo utente. Le note non cambiano: restano file Markdown dove sono.
+- Nuova pagina sulla privacy (PRIVACY.md): dove stanno le note, cosa resta sul Mac e come proteggere note con dati di clienti con FileVault e la Protezione avanzata dei dati di iCloud.
+
 ## 0.2.0 · 2026-11-13
 
 Scrivere è più veloce: elenchi che si continuano da soli nelle riunioni, punteggiatura che si sistema mentre scrivi o con Apple Intelligence, e schede con i bordi in ordine.

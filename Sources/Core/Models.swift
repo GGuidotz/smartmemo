@@ -146,9 +146,16 @@ struct KnowledgeStore {
     }
 
     func save(_ k: Knowledge) {
-        try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        // Cartella leggibile solo da chi usa il Mac (0700), file 0600.
+        try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true,
+                                                 attributes: [.posixPermissions: 0o700])
+        // Una cartella già creata dalla 0.2.0 o prima (0755) va ristretta anche lei.
+        try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: url.deletingLastPathComponent().path)
         let enc = JSONEncoder()
         enc.outputFormatting = [.prettyPrinted, .sortedKeys]
-        if let data = try? enc.encode(k) { try? data.write(to: url, options: .atomic) }
+        if let data = try? enc.encode(k) {
+            try? data.write(to: url, options: .atomic)
+            try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
+        }
     }
 }
