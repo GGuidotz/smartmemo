@@ -2,8 +2,8 @@
 
 # Cask di SmartMemo per il tap GGuidotz/homebrew-tap. Version e sha256 li aggiorna release.sh.
 cask "smartmemo" do
-  version "0.2.1"
-  sha256 "ddb06c35019754b4576ed9e464a39f8e18e5e7a01bbab1b22ccf8d93d4eaae5e"
+  version "0.2.2"
+  sha256 "a79426e99b49a9ab0458374fb34c48c58daa3912556c07083262b4b4450f0e40"
 
   url "https://github.com/GGuidotz/smartmemo/releases/download/v#{version}/SmartMemo-#{version}.dmg"
   name "SmartMemo"
