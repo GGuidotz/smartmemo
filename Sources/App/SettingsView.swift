@@ -1,7 +1,7 @@
 // Le impostazioni, in sei schede: Generale, Scrittura, Apple Intelligence, Progetti e persone, Aggiornamenti (con le note di
 // rilascio) e Feedback. Una finestra AppKit con dentro SwiftUI, perché l'avvio è AppKit. Barra del titolo trasparente:
-// la barra delle schede è di vetro e galleggia sopra il contenuto, il fondo è il materiale delle barre laterali.
-// Stesso schema di What's Going On. HIG, Impostazioni: poche scelte, ognuna spiegata sotto.
+// la barra delle schede (Sguardo) galleggia in fondo, di vetro, e le righe ci scorrono sotto; il fondo è il materiale
+// delle barre laterali. Stesso schema di What's Going On. HIG, Impostazioni: poche scelte, ognuna spiegata sotto.
 
 import AppKit
 import ServiceManagement
@@ -99,77 +99,63 @@ struct SettingsView: View {
     }
 
     var body: some View {
-        Group {
-            switch model.settingsTab {
-            case .general: GeneralSettings(model: model, prefs: prefs)
-            case .writing: WritingSettings(prefs: prefs)
-            case .intelligence: IntelligenceSettings(prefs: prefs)
-            case .learned: LearnedSettings(model: model, prefs: prefs)
-            case .updates: UpdatesSettings(updater: model.updater, prefs: prefs)
-            case .feedback: FeedbackSettings(model: model)
+        ZStack(alignment: .bottom) {
+            Group {
+                switch model.settingsTab {
+                case .general: GeneralSettings(model: model, prefs: prefs)
+                case .writing: WritingSettings(prefs: prefs)
+                case .intelligence: IntelligenceSettings(prefs: prefs)
+                case .learned: LearnedSettings(model: model, prefs: prefs)
+                case .updates: UpdatesSettings(updater: model.updater, prefs: prefs)
+                case .feedback: FeedbackSettings(model: model)
+                }
             }
-        }
-        .formStyle(.grouped)
-        .scrollContentBackground(.hidden)
-        .safeAreaInset(edge: .top, spacing: 0) {
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            // La barra delle schede galleggia in fondo: le righe ci scorrono sotto (SGPage lascia lo spazio).
             SettingsTabBar(selection: $model.settingsTab)
-                .padding(.top, 2)
-                .padding(.bottom, 6)
-                .frame(maxWidth: .infinity)
+                .padding(.bottom, SG.Size.tabBarBottomInset)
         }
+        // In alto, sotto i semafori della finestra, il contenuto sfuma invece di tagliarsi di netto.
+        .overlay(alignment: .top) { SGProgressiveBlur() }
         .frame(width: Self.size.width, height: Self.size.height)
+        // La barra del titolo è trasparente e la vista occupa tutta la finestra: senza questo la zona sicura in alto
+        // spinge giù tutto e la barra delle schede finisce sul bordo inferiore.
+        .ignoresSafeArea()
+        .sguardoAccent(default: .smartmemo)
         .id(prefs.language)
     }
 }
 
-/// La barra delle schede: un controllo che galleggia, quindi di vetro. ⌘1…⌘6 per passare da una scheda all'altra.
+/// La barra delle schede (Sguardo): una capsula che galleggia sopra il fondo della finestra, di vetro su macOS 26. La
+/// scheda scelta mostra il nome, le altre solo il simbolo (il nome resta nel suggerimento e per VoiceOver). ⌘1…⌘6.
 private struct SettingsTabBar: View {
     @Binding var selection: SettingsTab
 
     var body: some View {
-        GlassEffectContainer(spacing: 6) {
-            HStack(spacing: 2) {
-                ForEach(Array(SettingsTab.allCases.enumerated()), id: \.element) { index, tab in
-                    let selected = selection == tab
-                    Button {
-                        selection = tab
-                    } label: {
-                        VStack(spacing: 3) {
-                            Image(systemName: tab.symbol)
-                                .font(.system(size: 15, weight: .medium))
-                                .frame(height: 18)
-                            Text(tab.title)
-                                .font(.caption)
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.75)
-                        }
-                        .frame(width: 92, height: 44)
-                        .foregroundStyle(selected ? Color.accentColor : Color.secondary)
-                        .background {
-                            if selected {
-                                RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.primary.opacity(0.08))
-                            }
-                        }
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .keyboardShortcut(KeyEquivalent(Character("\(index + 1)")), modifiers: .command)
-                    .accessibilityLabel(tab.title)
-                    .accessibilityAddTraits(selected ? [.isSelected, .isButton] : .isButton)
-                }
-            }
-            .padding(5)
-            .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 19, style: .continuous))
-        }
+        SGFloatingTabBar(SettingsTab.allCases.map { SGTab($0, title: $0.title, systemImage: $0.symbol) },
+                         selection: $selection, commandShortcuts: true)
     }
 }
 
-/// Il testo sotto una sezione.
-private struct Footnote: View {
-    var text: String
-    init(_ text: String) { self.text = text }
+/// Una sezione con un'azione accanto al titolo (il +): Sguardo ha il titolo e basta, qui si aggiunge il pulsante.
+private struct ActionSection<Content: View, Footer: View>: View {
+    let title: String
+    let action: AnyView
+    @ViewBuilder var content: Content
+    @ViewBuilder var footer: Footer
+
     var body: some View {
-        Text(text).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 0) {
+                SGSectionTitle(title).accessibilityAddTraits(.isHeader)
+                action.padding(.trailing, 2)
+            }
+            SGGroup { content }
+            footer
+                .padding(.horizontal, SG.Space.sectionTitleInset)
+                .padding(.top, 6)
+        }
     }
 }
 
@@ -182,56 +168,81 @@ private struct GeneralSettings: View {
     @State private var loginError: String?
 
     var body: some View {
-        Form {
-            Section {
-                Toggle(L("Apertura rapida con %@", HotKey.display), isOn: $prefs.hotKeyEnabled)
-                Toggle(L("Icona nella barra dei menu"), isOn: $prefs.menuBarIcon)
-                Toggle(L("Apri all'accesso"), isOn: $launchAtLogin)
+        SGPage {
+            SGSection(L("Apertura")) {
+                SGToggleRow(L("Apertura rapida con %@", HotKey.display), isOn: $prefs.hotKeyEnabled)
+                SGDivider()
+                SGToggleRow(L("Icona nella barra dei menu"), isOn: $prefs.menuBarIcon)
+                SGDivider()
+                SGToggleRow(L("Apri all'accesso"), isOn: $launchAtLogin)
                     .onChange(of: launchAtLogin) { setLaunchAtLogin(launchAtLogin) }
-                if let loginError { Text(loginError).font(.caption).foregroundStyle(.red) }
-            } header: {
-                Text(L("Apertura"))
-            } footer: {
-                Footnote(L("Con l'apertura all'accesso la scorciatoia risponde sempre, anche se non hai ancora aperto l'app."))
-            }
-
-            Section {
-                Toggle(L("Schede in primo piano"), isOn: $prefs.cardsOnTop)
-                Stepper(value: $prefs.eveningHour, in: 12...23) {
-                    LabeledContent(L("Le to-do vanno a domani dalle"), value: "\(prefs.eveningHour):00")
-                        .monospacedDigit()
+                if let loginError {
+                    SGRowBlock { Text(loginError).font(SG.Font.caption).foregroundStyle(.red) }
                 }
-            } header: {
-                Text(L("Schede"))
             } footer: {
-                Footnote(L("In primo piano le schede restano sopra le altre finestre; la puntina in alto a destra di ogni scheda lo cambia solo per quella. Di sera si scrive per domani: dall'ora scelta, To-do apre la pagina del giorno dopo."))
+                SGFootnote(L("Con l'apertura all'accesso la scorciatoia risponde sempre, anche se non hai ancora aperto l'app."))
             }
 
-            Section {
-                LabeledContent(L("Cartella delle note")) {
+            SGSection(L("Schede")) {
+                SGToggleRow(L("Schede in primo piano"), isOn: $prefs.cardsOnTop)
+                SGDivider()
+                SGLabeledRow {
+                    Text(L("Le to-do vanno a domani dalle"))
+                } trailing: {
+                    HStack(spacing: 8) {
+                        Text("\(prefs.eveningHour):00")
+                            .font(SG.Font.body)
+                            .foregroundStyle(SG.Ink.secondary)
+                            .monospacedDigit()
+                            .lineLimit(1)
+                            .fixedSize()
+                        Stepper(L("Le to-do vanno a domani dalle"), value: $prefs.eveningHour, in: 12...23)
+                            .labelsHidden()
+                    }
+                }
+            } footer: {
+                SGFootnote(L("In primo piano le schede restano sopra le altre finestre; la puntina in alto a destra di ogni scheda lo cambia solo per quella. Di sera si scrive per domani: dall'ora scelta, To-do apre la pagina del giorno dopo."))
+            }
+
+            SGSection(L("Note")) {
+                SGLabeledRow {
+                    Text(L("Cartella delle note"))
+                } trailing: {
                     Text(model.store.root.path(percentEncoded: false))
+                        .font(SG.Font.caption)
                         .lineLimit(2)
                         .truncationMode(.middle)
                         .textSelection(.enabled)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(SG.Ink.secondary)
+                        .multilineTextAlignment(.trailing)
+                        .frame(maxWidth: 330, alignment: .trailing)
                 }
-                Button(L("Mostra nel Finder")) {
-                    try? FileManager.default.createDirectory(at: model.store.root, withIntermediateDirectories: true)
-                    NSWorkspace.shared.activateFileViewerSelecting([model.store.root])
+                SGDivider()
+                SGRowBlock {
+                    Button(L("Mostra nel Finder")) {
+                        try? FileManager.default.createDirectory(at: model.store.root, withIntermediateDirectories: true)
+                        NSWorkspace.shared.activateFileViewerSelecting([model.store.root])
+                    }
+                    .buttonStyle(.sgSecondary)
                 }
-            } header: {
-                Text(L("Note"))
             } footer: {
-                Footnote(model.store.isInICloud
+                SGFootnote(model.store.isInICloud
                          ? L("File Markdown in iCloud Drive: li apri anche con altre app, e restano tuoi.")
                          : L("File Markdown in Documenti: iCloud Drive non è attivo su questo Mac."))
             }
 
-            Section {
-                Picker(L("Lingua"), selection: $prefs.language) {
-                    ForEach(AppLanguage.allCases) { Text($0.title).tag($0) }
+            SGSection {
+                SGMenuRow(L("Lingua"), selection: $prefs.language,
+                          options: AppLanguage.allCases.map { (value: $0, title: $0.title) })
+                SGDivider()
+                SGAccentRow(L("Colore d'accento"),
+                            options: (app: L("Colore dell'app"), system: L("Colore di sistema"), custom: L("Personalizzato")),
+                            appDefault: .smartmemo)
+                SGDivider()
+                SGRowBlock {
+                    Button(L("Rivedi la guida iniziale")) { model.showOnboarding() }
+                        .buttonStyle(.sgSecondary)
                 }
-                Button(L("Rivedi la guida iniziale")) { model.showOnboarding() }
             }
         }
     }
@@ -253,38 +264,33 @@ private struct WritingSettings: View {
     @ObservedObject var prefs: Preferences
 
     var body: some View {
-        Form {
-            Section {
-                Toggle(L("Punteggiatura mentre scrivi"), isOn: $prefs.autoPunctuation)
-                Toggle(L("Maiuscola a inizio frase (riunioni)"), isOn: $prefs.autoCapitalize)
-            } header: {
-                Text(L("Regole di scrittura"))
+        SGPage {
+            SGSection(L("Regole di scrittura")) {
+                SGToggleRow(L("Punteggiatura mentre scrivi"), isOn: $prefs.autoPunctuation)
+                SGDivider()
+                SGToggleRow(L("Maiuscola a inizio frase (riunioni)"), isOn: $prefs.autoCapitalize)
             } footer: {
-                Footnote(L("Niente spazio prima di virgola, punto e due punti; due spazi diventano un punto. Indietro, subito dopo, annulla la correzione. Nelle to-do la maiuscola non c'è: si comincia con un verbo."))
+                SGFootnote(L("Niente spazio prima di virgola, punto e due punti; due spazi diventano un punto. Indietro, subito dopo, annulla la correzione. Nelle to-do la maiuscola non c'è: si comincia con un verbo."))
             }
 
-            Section {
-                Toggle(L("Elenchi automatici (riunioni)"), isOn: $prefs.autoLists)
-            } header: {
-                Text(L("Elenchi"))
+            SGSection(L("Elenchi")) {
+                SGToggleRow(L("Elenchi automatici (riunioni)"), isOn: $prefs.autoLists)
             } footer: {
-                Footnote(L("Scrivi \"- \" o \"1. \" a inizio riga: Invio continua l'elenco, Invio su una voce vuota lo chiude, Tab annida e i numeri si aggiornano da soli. Il file resta Markdown."))
+                SGFootnote(L("Scrivi \"- \" o \"1. \" a inizio riga: Invio continua l'elenco, Invio su una voce vuota lo chiude, Tab annida e i numeri si aggiornano da soli. Il file resta Markdown."))
             }
 
-            Section {
-                Toggle(L("Correzione automatica di macOS"), isOn: $prefs.systemAutocorrect)
-                Toggle(L("Sostituzioni di testo di macOS"), isOn: $prefs.textReplacements)
-            } header: {
-                Text(L("Correzione di macOS"))
+            SGSection(L("Correzione di macOS")) {
+                SGToggleRow(L("Correzione automatica di macOS"), isOn: $prefs.systemAutocorrect)
+                SGDivider()
+                SGToggleRow(L("Sostituzioni di testo di macOS"), isOn: $prefs.textReplacements)
             } footer: {
-                Footnote(L("Le sigle dei progetti e i nomi che SmartMemo conosce non vengono corretti. Le sostituzioni sono quelle di Impostazioni di Sistema › Tastiera."))
+                SGFootnote(L("Le sigle dei progetti e i nomi che SmartMemo conosce non vengono corretti. Le sostituzioni sono quelle di Impostazioni di Sistema › Tastiera."))
             }
 
-            Section {
-                Tip(symbol: "text.badge.checkmark", text: L("Sistema la punteggiatura (⌥⌘P, o clic destro) aggiunge virgole, punti e maiuscole a un testo dettato, sulla selezione o su tutta la nota."))
-                Tip(symbol: "lock", text: L("Lo fa Apple Intelligence sul Mac, senza rete: cambia solo la punteggiatura, mai le parole. ⌘Z annulla."))
-            } header: {
-                Text(L("Punteggiatura con Apple Intelligence"))
+            SGSection(L("Punteggiatura con Apple Intelligence")) {
+                SGRowBlock { Tip(symbol: "text.badge.checkmark", text: L("Sistema la punteggiatura (⌥⌘P, o clic destro) aggiunge virgole, punti e maiuscole a un testo dettato, sulla selezione o su tutta la nota.")) }
+                SGDivider()
+                SGRowBlock { Tip(symbol: "lock", text: L("Lo fa Apple Intelligence sul Mac, senza rete: cambia solo la punteggiatura, mai le parole. ⌘Z annulla.")) }
             }
         }
     }
@@ -310,28 +316,34 @@ private struct IntelligenceSettings: View {
     @ObservedObject var prefs: Preferences
 
     var body: some View {
-        Form {
-            Section {
-                IntelligenceStatus()
-                Toggle(L("Riassunti delle riunioni con Apple Intelligence"), isOn: $prefs.useAppleIntelligence)
+        SGPage {
+            SGSection {
+                SGRowBlock { IntelligenceStatus() }
+                SGDivider()
+                SGToggleRow(L("Riassunti delle riunioni con Apple Intelligence"), isOn: $prefs.useAppleIntelligence)
                 if Intelligence.unavailableReason != nil {
-                    Button(L("Apri Impostazioni di Sistema")) {
-                        if let url = URL(string: "x-apple.systempreferences:com.apple.Siri-Settings.extension") {
-                            NSWorkspace.shared.open(url)
+                    SGDivider()
+                    SGRowBlock {
+                        Button(L("Apri Impostazioni di Sistema")) {
+                            if let url = URL(string: "x-apple.systempreferences:com.apple.Siri-Settings.extension") {
+                                NSWorkspace.shared.open(url)
+                            }
                         }
+                        .buttonStyle(.sgSecondary)
                     }
                 }
             } footer: {
-                Footnote(L("Il modello sta sul Mac: le note non escono mai, nemmeno verso Apple. Niente rete, niente account."))
+                SGFootnote(L("Il modello sta sul Mac: le note non escono mai, nemmeno verso Apple. Niente rete, niente account."))
             }
 
-            Section {
-                Tip(symbol: "checklist", text: L("Concludi riunione scrive in cima la sintesi, il prossimo incontro, le scadenze e le to-do minimal con chi le fa."))
-                Tip(symbol: "arrow.clockwise", text: L("Puoi rifarlo dopo aver aggiunto appunti, toglierlo, o annullarlo con ⌘Z. Le to-do del riassunto finiscono in Oggi."))
-                Tip(symbol: "highlighter", text: L("Progetti, persone e date si riconoscono mentre scrivi con il linguaggio naturale del Mac, anche senza Apple Intelligence."))
-                Tip(symbol: "list.number", text: L("Senza Apple Intelligence il riassunto si fa con le regole: le righe numerate o a elenco diventano to-do, il nome tra parentesi è chi le fa."))
-            } header: {
-                Text(L("Cosa fa"))
+            SGSection(L("Cosa fa")) {
+                SGRowBlock { Tip(symbol: "checklist", text: L("Concludi riunione scrive in cima la sintesi, il prossimo incontro, le scadenze e le to-do minimal con chi le fa.")) }
+                SGDivider()
+                SGRowBlock { Tip(symbol: "arrow.clockwise", text: L("Puoi rifarlo dopo aver aggiunto appunti, toglierlo, o annullarlo con ⌘Z. Le to-do del riassunto finiscono in Oggi.")) }
+                SGDivider()
+                SGRowBlock { Tip(symbol: "highlighter", text: L("Progetti, persone e date si riconoscono mentre scrivi con il linguaggio naturale del Mac, anche senza Apple Intelligence.")) }
+                SGDivider()
+                SGRowBlock { Tip(symbol: "list.number", text: L("Senza Apple Intelligence il riassunto si fa con le regole: le righe numerate o a elenco diventano to-do, il nome tra parentesi è chi le fa.")) }
             }
         }
     }
@@ -343,9 +355,9 @@ struct Tip: View {
 
     var body: some View {
         Label {
-            Text(text).fixedSize(horizontal: false, vertical: true)
+            Text(text).font(SG.Font.body).foregroundStyle(SG.Ink.primary).fixedSize(horizontal: false, vertical: true)
         } icon: {
-            Image(systemName: symbol).foregroundStyle(.tint).frame(width: 22)
+            Image(systemName: symbol).foregroundStyle(SG.Ink.secondary).frame(width: 22)
         }
     }
 }
@@ -360,70 +372,84 @@ private struct LearnedSettings: View {
     @State private var addingPerson = false
 
     var body: some View {
-        Form {
-            Section {
-                HStack {
-                    Button(L("Configura dalle tue note…")) { model.showSetup() }
-                    Button(L("Esporta configurazione…")) {
-                        exportMessage = ConfigurationFile.export(model.knowledge, prefs: model.prefs)
+        SGPage {
+            SGSection {
+                SGRowBlock {
+                    HStack(spacing: 8) {
+                        Button(L("Configura dalle tue note…")) { model.showSetup() }
+                        Button(L("Esporta configurazione…")) {
+                            exportMessage = ConfigurationFile.export(model.knowledge, prefs: model.prefs)
+                        }
+                        Spacer(minLength: 0)
                     }
+                    .buttonStyle(.sgSecondary)
                 }
-                if let exportMessage { Footnote(exportMessage) }
+                if let exportMessage {
+                    SGRowBlock { SGFootnote(exportMessage) }
+                }
             } footer: {
-                Footnote(L("Parti da qualche pagina delle tue note e decidi cosa è progetto, cosa è persona e cosa evidenziare. Tutto resta su questo Mac; l'esportazione è un file tuo, per un altro Mac o per ripartire da lì."))
+                SGFootnote(L("Parti da qualche pagina delle tue note e decidi cosa è progetto, cosa è persona e cosa evidenziare. Tutto resta su questo Mac; l'esportazione è un file tuo, per un altro Mac o per ripartire da lì."))
             }
-            Section {
-                Toggle(L("Progetti"), isOn: $prefs.highlightProjects)
-                Toggle(L("Persone e clienti"), isOn: $prefs.highlightPeople)
-                Toggle(L("Date e orari"), isOn: $prefs.highlightDates)
-                Toggle(L("URGENTE"), isOn: $prefs.highlightUrgent)
-            } header: {
-                Text(L("Evidenzia mentre scrivi"))
+
+            SGSection(L("Evidenzia mentre scrivi")) {
+                SGToggleRow(L("Progetti"), isOn: $prefs.highlightProjects)
+                SGDivider()
+                SGToggleRow(L("Persone e clienti"), isOn: $prefs.highlightPeople)
+                SGDivider()
+                SGToggleRow(L("Date e orari"), isOn: $prefs.highlightDates)
+                SGDivider()
+                SGToggleRow(L("URGENTE"), isOn: $prefs.highlightUrgent)
             }
-            Section {
+
+            ActionSection(title: L("Progetti"),
+                          action: AnyView(SectionPlusButton(help: L("Aggiungi un progetto")) { addingProject = true })) {
                 if addingProject {
-                    NewNameField(prompt: L("Sigla, es. SITO o SITO Nuovo sito")) { model.addProject($0) } close: {
-                        addingProject = false
+                    SGRowBlock {
+                        NewNameField(prompt: L("Sigla, es. SITO o SITO Nuovo sito")) { model.addProject($0) } close: {
+                            addingProject = false
+                        }
                     }
                 } else if model.knowledge.projects.isEmpty {
-                    Text(L("Nessun progetto ancora. Premi + o scrivi nelle note una sigla seguita dai due punti, come SITO:")).foregroundStyle(.secondary)
+                    SGRowBlock {
+                        Text(L("Nessun progetto ancora. Premi + o scrivi nelle note una sigla seguita dai due punti, come SITO:"))
+                            .foregroundStyle(SG.Ink.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
-                ForEach(model.knowledge.projects, id: \.self) { sigla in
+                ForEach(Array(model.knowledge.projects.enumerated()), id: \.element) { index, sigla in
+                    if index > 0 || addingProject { SGDivider() }
                     ProjectRow(model: model, sigla: sigla)
                 }
-            } header: {
-                HStack {
-                    Text(L("Progetti"))
-                    Spacer()
-                    PlusButton(help: L("Aggiungi un progetto")) { addingProject = true }
-                }
             } footer: {
-                Footnote(L("Il nome lungo è facoltativo: compare accanto alla sigla nella vista Oggi."))
+                SGFootnote(L("Il nome lungo è facoltativo: compare accanto alla sigla nella vista Oggi."))
             }
-            Section {
+
+            ActionSection(title: L("Persone e clienti"),
+                          action: AnyView(SectionPlusButton(help: L("Aggiungi una persona o un cliente")) { addingPerson = true })) {
                 if addingPerson {
-                    NewNameField(prompt: L("Nome, es. Marta o Studio Rossi")) { model.addPerson($0) } close: {
-                        addingPerson = false
+                    SGRowBlock {
+                        NewNameField(prompt: L("Nome, es. Marta o Studio Rossi")) { model.addPerson($0) } close: {
+                            addingPerson = false
+                        }
                     }
                 } else if model.knowledge.people.isEmpty {
-                    Text(L("Nessuna persona ancora. Premi + per aggiungerne una.")).foregroundStyle(.secondary)
+                    SGRowBlock {
+                        Text(L("Nessuna persona ancora. Premi + per aggiungerne una."))
+                            .foregroundStyle(SG.Ink.secondary)
+                    }
                 }
-                ForEach(model.knowledge.people, id: \.self) { name in
-                    HStack {
+                ForEach(Array(model.knowledge.people.enumerated()), id: \.element) { index, name in
+                    if index > 0 || addingPerson { SGDivider() }
+                    SGLabeledRow {
                         Text(name)
-                        Spacer()
+                    } trailing: {
                         Button(L("Dimentica")) { model.forgetPerson(name) }
+                            .buttonStyle(.sgSecondary)
                             .accessibilityLabel(L("Dimentica %@", name))
                     }
                 }
-            } header: {
-                HStack {
-                    Text(L("Persone e clienti"))
-                    Spacer()
-                    PlusButton(help: L("Aggiungi una persona o un cliente")) { addingPerson = true }
-                }
             } footer: {
-                Footnote(L("SmartMemo impara da ciò che scrivi. Se sbaglia, clic destro sulla parola nella nota."))
+                SGFootnote(L("SmartMemo impara da ciò che scrivi. Se sbaglia, clic destro sulla parola nella nota."))
             }
         }
     }
@@ -438,14 +464,19 @@ private struct ProjectRow: View {
         HStack(spacing: 10) {
             Circle().fill(Color.project(sigla, knowledge: model.knowledge)).frame(width: 9, height: 9)
                 .accessibilityHidden(true)
-            Text(sigla).font(.body.weight(.semibold)).frame(minWidth: 60, alignment: .leading)
+            Text(sigla).font(SG.Font.bodyEmphasis).foregroundStyle(SG.Ink.primary)
+                .frame(minWidth: 60, alignment: .leading)
             TextField(L("Nome lungo"), text: $name)
-                .textFieldStyle(.roundedBorder)
+                .capsuleField()
                 .onSubmit { model.setProjectName(sigla, name) }
                 .accessibilityLabel(L("Nome lungo di %@", sigla))
             Button(L("Dimentica")) { model.forgetProject(sigla) }
+                .buttonStyle(.sgSecondary)
                 .accessibilityLabel(L("Dimentica %@", sigla))
         }
+        .padding(.horizontal, SG.Space.rowInset)
+        .padding(.vertical, 6)
+        .frame(minHeight: SG.Size.row)
         .onAppear { name = model.knowledge.projectNames[sigla] ?? "" }
     }
 }
@@ -458,31 +489,36 @@ private struct UpdatesSettings: View {
     private let releases = Changelog.load()
 
     var body: some View {
-        Form {
-            Section {
-                Toggle(L("Controlla automaticamente (ogni 6 ore)"), isOn: $prefs.autoCheckUpdates)
-                LabeledContent(L("Versione installata"), value: updater.currentVersion)
-                LabeledContent(L("Ultimo controllo")) {
+        SGPage {
+            SGSection {
+                SGToggleRow(L("Controlla automaticamente (ogni 6 ore)"), isOn: $prefs.autoCheckUpdates)
+                SGDivider()
+                SGValueRow(L("Versione installata"), value: updater.currentVersion)
+                SGDivider()
+                SGValueRow(L("Ultimo controllo")) {
                     if let last = updater.lastCheck { Text(last, style: .relative) } else { Text(L("Mai")) }
                 }
-                HStack {
-                    Button(L("Controlla ora")) { Task { await updater.check() } }
-                        .disabled(updater.state == .checking)
-                    UpdateStateText(updater: updater)
+                SGDivider()
+                SGRowBlock {
+                    HStack(spacing: 10) {
+                        Button(L("Controlla ora")) { Task { await updater.check() } }
+                            .buttonStyle(.sgSecondary)
+                            .disabled(updater.state == .checking)
+                        UpdateStateText(updater: updater)
+                        Spacer(minLength: 0)
+                    }
                 }
             } footer: {
-                Footnote(L("Il controllo legge solo il numero di versione e le note di rilascio da GitHub. Nient'altro esce dal Mac."))
+                SGFootnote(L("Il controllo legge solo il numero di versione e le note di rilascio da GitHub. Nient'altro esce dal Mac."))
             }
 
             if updater.isUpdateAvailable {
-                Section { UpdateCard(updater: updater) }
+                SGSection { SGRowBlock { UpdateCard(updater: updater) } }
             }
 
             if !releases.isEmpty {
-                Section {
-                    ChangelogList(entries: releases)
-                } header: {
-                    Text(L("Note di rilascio"))
+                SGSection(L("Note di rilascio")) {
+                    SGRowBlock { ChangelogList(entries: releases) }
                 }
             }
         }
@@ -499,7 +535,7 @@ private struct UpdateStateText: View {
         case .upToDate:
             Label(L("SmartMemo è aggiornato."), systemImage: "checkmark.circle.fill").foregroundStyle(.green)
         case .available(let version):
-            Label(L("Disponibile la versione %@", version), systemImage: "arrow.down.circle.fill").foregroundStyle(Color.accentColor)
+            Label(L("Disponibile la versione %@", version), systemImage: "arrow.down.circle.fill").foregroundStyle(.tint)
         case .failed(let why):
             Text(why).foregroundStyle(.orange).fixedSize(horizontal: false, vertical: true)
         }
@@ -514,20 +550,22 @@ private struct UpdateCard: View {
         VStack(alignment: .leading, spacing: 12) {
             if case .available(let version) = updater.state {
                 Label(L("Disponibile SmartMemo %@", version), systemImage: "arrow.down.circle.fill")
-                    .font(.headline)
+                    .font(SG.Font.bodyEmphasis)
             }
             if !updater.news.isEmpty { ChangelogList(entries: updater.news) }
-            Text(L("Per aggiornare, esegui nel Terminale:")).foregroundStyle(.secondary)
+            Text(L("Per aggiornare, esegui nel Terminale:")).foregroundStyle(SG.Ink.secondary)
             Text(updater.command)
-                .font(.system(.callout, design: .monospaced))
+                .font(SG.Font.value)
                 .textSelection(.enabled)
                 .padding(10)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(RoundedRectangle(cornerRadius: 8).fill(Color.secondary.opacity(0.12)))
-            HStack {
+                .background(RoundedRectangle(cornerRadius: SG.Radius.tile, style: .continuous).fill(SG.Fill.tile))
+                .overlay(RoundedRectangle.sgTile.strokeBorder(SG.Fill.rowBorder, lineWidth: SG.Stroke.hairline))
+            HStack(spacing: 8) {
                 Button(L("Copia comando")) { updater.copyCommand() }
+                    .buttonStyle(.sgSecondary)
                 Button(L("Aggiorna nel Terminale")) { updater.runInTerminal() }
-                    .buttonStyle(.glassProminent)
+                    .buttonStyle(.sgPrimary)
             }
             if let error = updater.terminalError {
                 Text(error).foregroundStyle(.orange).fixedSize(horizontal: false, vertical: true)
@@ -544,68 +582,77 @@ private struct FeedbackSettings: View {
     @State private var showReport = false
 
     var body: some View {
-        Form {
-            Section {
-                HStack(spacing: 16) {
-                    Image(nsImage: NSApp.applicationIconImage)
-                        .resizable()
-                        .frame(width: 72, height: 72)
-                        .accessibilityHidden(true)
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("Smart(Me)mo").font(.title2.weight(.semibold)).fontDesign(.rounded)
-                        Text(L("Versione %@", "\(SystemInfo.version) (\(SystemInfo.build))")).foregroundStyle(.secondary)
-                        Text(L("To-do e riunioni che capiscono progetti, persone e date.")).foregroundStyle(.secondary)
+        SGPage {
+            SGSection {
+                SGRowBlock {
+                    HStack(spacing: 16) {
+                        Image(nsImage: NSApp.applicationIconImage)
+                            .resizable()
+                            .frame(width: 72, height: 72)
+                            .accessibilityHidden(true)
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("Smart(Me)mo").font(SG.Font.title)
+                            Text(L("Versione %@", "\(SystemInfo.version) (\(SystemInfo.build))"))
+                                .foregroundStyle(SG.Ink.secondary)
+                            Text(L("To-do e riunioni che capiscono progetti, persone e date."))
+                                .foregroundStyle(SG.Ink.secondary)
+                        }
                     }
                 }
-                .padding(.vertical, 4)
             }
 
-            Section {
+            SGSection(L("Feedback")) {
                 FeedbackButton(symbol: "ladybug", title: L("Segnala un problema"),
                                detail: L("Su GitHub, con versione, macOS e modello del Mac già scritti.")) {
                     Feedback.openIssue(.problem)
                 }
+                SGDivider()
                 FeedbackButton(symbol: "lightbulb", title: L("Suggerisci un'idea"),
                                detail: L("Un modo di scrivere che non riconosce, una vista che manca, qualcosa da semplificare.")) {
                     Feedback.openIssue(.idea)
                 }
+                SGDivider()
                 FeedbackButton(symbol: "envelope", title: L("Scrivi un'email"), detail: Developer.email) {
                     Feedback.composeEmail()
                 }
-            } header: {
-                Text(L("Feedback"))
             } footer: {
-                Footnote(L("GitHub è il canale preferito: le segnalazioni sono pubbliche, quindi non incollare il testo delle note. Per qualcosa di privato usa l'email."))
+                SGFootnote(L("GitHub è il canale preferito: le segnalazioni sono pubbliche, quindi non incollare il testo delle note. Per qualcosa di privato usa l'email."))
             }
 
-            Section {
-                HStack {
-                    Button(L("Copia report")) {
-                        Feedback.copyReport(model: model)
-                        status = L("Report copiato: incollalo nella segnalazione.")
+            SGSection(L("Diagnostica")) {
+                SGRowBlock {
+                    HStack(spacing: 8) {
+                        Button(L("Copia report")) {
+                            Feedback.copyReport(model: model)
+                            status = L("Report copiato: incollalo nella segnalazione.")
+                        }
+                        Button(L("Salva…")) { status = Feedback.saveReport(model: model) }
+                        Spacer()
+                        Button(showReport ? L("Nascondi") : L("Mostra")) { showReport.toggle() }
                     }
-                    Button(L("Salva…")) { status = Feedback.saveReport(model: model) }
-                    Spacer()
-                    Button(showReport ? L("Nascondi") : L("Mostra")) { showReport.toggle() }
+                    .buttonStyle(.sgSecondary)
                 }
-                if let status { Footnote(status) }
+                if let status {
+                    SGRowBlock { SGFootnote(status) }
+                }
                 if showReport {
-                    ScrollView {
-                        Text(DiagnosticsReport.make(model: model))
-                            .font(.system(.caption, design: .monospaced))
-                            .textSelection(.enabled)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                    SGDivider()
+                    SGRowBlock {
+                        ScrollView {
+                            Text(DiagnosticsReport.make(model: model))
+                                .font(.system(size: 11, design: .monospaced))
+                                .textSelection(.enabled)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .frame(height: 200)
                     }
-                    .frame(height: 200)
                 }
-            } header: {
-                Text(L("Diagnostica"))
             } footer: {
-                Footnote(L("Il report dice versione, Mac, le tue scelte e quante note hai. Mai il testo delle note, né nomi di persone o progetti."))
+                SGFootnote(L("Il report dice versione, Mac, le tue scelte e quante note hai. Mai il testo delle note, né nomi di persone o progetti."))
             }
 
-            Section {
-                DeveloperLinks()
+            SGSection {
+                SGRowBlock { DeveloperLinks() }
             }
         }
     }
@@ -621,16 +668,20 @@ private struct FeedbackButton: View {
         Button(action: action) {
             HStack(spacing: 12) {
                 Image(systemName: symbol)
-                    .font(.title3)
-                    .foregroundStyle(Color.accentColor)
+                    .font(.system(size: 17))
+                    .foregroundStyle(SG.Ink.secondary)
                     .frame(width: 26)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(title).foregroundStyle(.primary)
-                    Text(detail).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    Text(title).font(SG.Font.body).foregroundStyle(SG.Ink.primary)
+                    Text(detail).font(SG.Font.caption).foregroundStyle(SG.Ink.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer()
-                Image(systemName: "arrow.up.right").font(.caption.weight(.semibold)).foregroundStyle(.tertiary)
+                Image(systemName: "arrow.up.right").font(.system(size: 11, weight: .semibold)).foregroundStyle(SG.Ink.tertiary)
             }
+            .padding(.horizontal, SG.Space.rowInset)
+            .padding(.vertical, 10)
+            .frame(maxWidth: .infinity, minHeight: SG.Size.row, alignment: .leading)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

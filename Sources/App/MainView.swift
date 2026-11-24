@@ -24,6 +24,7 @@ struct MainView: View {
             }
         }
         .frame(minWidth: 560, minHeight: 420)
+        .sguardoAccent(default: .smartmemo)
     }
 
     @ViewBuilder

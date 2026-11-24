@@ -53,7 +53,9 @@ macOS 26 o successivo.
 brew install --cask gguidotz/tap/smartmemo
 ```
 
-Dal codice, con Xcode o i Command Line Tools: `./build.sh --install`.
+Dal codice, con Xcode o i Command Line Tools: `./build.sh --install`. Clona con `git clone --recursive`: porta anche
+Sguardo, il sistema di design comune (github.com/GGuidotz/sguardo) in `Vendor/Sguardo`; se hai già clonato senza,
+esegui `git submodule update --init`.
 
 ## Tappe
 

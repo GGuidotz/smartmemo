@@ -51,6 +51,12 @@ if [ -n "$SDK" ] && [ -d "$SDK/System/Library/Frameworks/FoundationModels.framew
 fi
 
 SOURCES=(Sources/**/*.swift)
+# Sguardo, il sistema di design comune (github.com/GGuidotz/sguardo): submodule in Vendor/Sguardo, compilato insieme
+# all'app (un modulo solo, niente import). Per provare modifiche al kit senza aggiornare il submodule:
+# SGUARDO_DIR=~/Developer/design-system ./build.sh
+SGUARDO="${SGUARDO_DIR:-Vendor/Sguardo}/swift/Sources/Sguardo"
+[ -d "$SGUARDO" ] || { echo "Manca Sguardo: esegui git submodule update --init" >&2; exit 1; }
+SOURCES+=("$SGUARDO"/*.swift)
 for arch in arm64 x86_64; do
   mkdir -p "$BUILD/$arch"
   swiftc -O -swift-version 5 -parse-as-library -target "$arch-apple-macos26.0" "${LINK[@]}" "${SOURCES[@]}" -o "$BUILD/$arch/$EXE"

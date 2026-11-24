@@ -20,6 +20,21 @@ struct PlusButton: View {
     }
 }
 
+/// Il + accanto al titolo di una sezione delle impostazioni: capsula neutra di Sguardo.
+struct SectionPlusButton: View {
+    let help: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "plus")
+        }
+        .buttonStyle(.sgSecondary)
+        .help(help)
+        .accessibilityLabel(help)
+    }
+}
+
 /// Il campo che compare col +. `add` aggiunge e dice il nome com'è stato salvato, o nil se non va bene.
 struct NewNameField: View {
     let prompt: String
@@ -40,11 +55,12 @@ struct NewNameField: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 8) {
                 TextField(prompt, text: $text)
-                    .textFieldStyle(.roundedBorder)
+                    .capsuleField()
                     .focused($focused)
                     .onSubmit(submit)
                     .onExitCommand(perform: close)
                 Button(L("Aggiungi"), action: submit)
+                    .buttonStyle(.sgSecondary)
                     .disabled(trimmed.isEmpty)
                 Button(action: close) {
                     Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
@@ -55,8 +71,8 @@ struct NewNameField: View {
             }
             if let added {
                 Label(L("Aggiunto: %@", added), systemImage: "checkmark")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(SG.Font.caption)
+                    .foregroundStyle(SG.Ink.secondary)
             }
         }
         .onAppear { DispatchQueue.main.async { focused = true } }
@@ -102,11 +118,12 @@ struct AddEntityPopover: View {
             }
             Text(role == .project ? L("Dopo la sigla puoi scrivere il nome lungo: SITO Nuovo sito.")
                                   : L("Si evidenzia in ogni nota, anche dove l'app da sola non l'avrebbe riconosciuto."))
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                .font(SG.Font.caption)
+                .foregroundStyle(SG.Ink.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(14)
         .frame(width: 320)
+        .sguardoAccent(default: .smartmemo)
     }
 }

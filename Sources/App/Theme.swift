@@ -5,6 +5,10 @@
 //   data       sottolineatura spessa arancione
 //   URGENTE    capsula rossa piena, testo bianco
 // Rosso, arancione e indaco sono riservati: i progetti prendono gli altri colori.
+// Le forme, i riempimenti e le molle dell'interfaccia (impostazioni, guida, schede) vengono da Sguardo, il sistema di
+// design comune (github.com/GGuidotz/sguardo, submodule in Vendor/Sguardo, compilato insieme all'app da build.sh): qui
+// restano i colori di SmartMemo e l'accento. Il vetro solo su ciò che galleggia (pannello rapido, barre delle schede,
+// pulsanti in fondo alle schede); il contenuto usa i riempimenti di Sguardo.
 
 import AppKit
 import SwiftUI
@@ -13,6 +17,22 @@ enum Theme {
     static let bodySize: CGFloat = 15
     static var bodyFont: NSFont { .systemFont(ofSize: bodySize) }
     static var strongFont: NSFont { .systemFont(ofSize: bodySize, weight: .semibold) }
+
+    /// Il colore del marchio, preso dall'icona: l'indaco delle persone, la forma colorata più grande del foglio.
+    static let brandHex: UInt32 = 0x5E5CE6
+
+    /// L'accento che si vede adesso, anche per il testo disegnato da AppKit (cerchi, riquadro del riassunto, puntina):
+    /// la scelta di Impostazioni › Generale (colore dell'app, di macOS o personalizzato), letta com'è salvata da Sguardo.
+    static var accent: NSColor {
+        let d = UserDefaults.standard
+        let choice = SGAccentChoice(rawValue: d.string(forKey: SGAccentStore.choiceKey) ?? "") ?? .app
+        let custom = d.object(forKey: SGAccentStore.customKey) as? Int ?? -1
+        switch choice {
+        case .app: return NSColor(sgHex: brandHex)
+        case .system: return .controlAccentColor
+        case .custom: return custom >= 0 ? NSColor(sgHex: UInt32(custom)) : NSColor(sgHex: brandHex)
+        }
+    }
 
     static let person = NSColor.systemIndigo
     static let date = NSColor.systemOrange
@@ -122,6 +142,36 @@ enum Theme {
         case .date:
             return [.underlineStyle: NSUnderlineStyle.thick.rawValue, .underlineColor: date.withAlphaComponent(0.7)]
         }
+    }
+}
+
+extension SG.Accent {
+    /// L'accento di SmartMemo per Sguardo: l'indaco dell'icona (Theme.brandHex). L'icona è un foglio chiaro senza un
+    /// colore proprio; tra le forme colorate (capsula blu, barra indaco, scintilla gialla, sottolineatura arancione)
+    /// la più estesa è la barra indaco, ed è anche l'unica su cui il bianco regge (circa 5:1).
+    static let smartmemo = SG.Accent(hex: Theme.brandHex)
+}
+
+extension View {
+    /// Pulsante di vetro (secondario), solo sulle barre che galleggiano. Nel contenuto: `.buttonStyle(.sgSecondary)`.
+    func floatingGlassButton() -> some View { buttonStyle(.glass) }
+
+    /// Il pulsante principale di una barra che galleggia: vetro colorato con l'accento. Nel contenuto: `.buttonStyle(.sgPrimary)`.
+    func floatingGlassProminentButton() -> some View { buttonStyle(.glassProminent) }
+
+    /// Vetro per i controlli che galleggiano. Mai per il contenuto.
+    func glassSurface(in shape: some InsettableShape, interactive: Bool = false) -> some View {
+        sgFloatingChrome(in: shape, interactive: interactive)
+    }
+
+    /// Campo di testo a capsula per le finestre (Sguardo ha solo quello nero delle isole): riempimento e filo dei menu.
+    func capsuleField(height: CGFloat = 28) -> some View {
+        textFieldStyle(.plain)
+            .font(SG.Font.field)
+            .padding(.horizontal, 12)
+            .frame(height: height)
+            .background(Capsule().fill(SG.Fill.pickerPill))
+            .overlay(Capsule().strokeBorder(SG.Fill.rowBorder, lineWidth: SG.Stroke.hairline))
     }
 }
 

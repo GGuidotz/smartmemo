@@ -27,8 +27,15 @@ Piano: progetto AppDevelop, `app-note/piano-smartmemo.md`.
   Controllo: `python3 -I tools/check-strings.py`.
 - Versione: `VERSION` + sezione `## <versione> · <data>` in cima a `CHANGELOG.md` (build.sh la richiede).
   Rilascio: `./release.sh` sul Mac di Giulio (DMG, release GitHub, cask nel tap).
-- Design: Human Interface Guidelines (skill apple-design). Colore mai come unico segnale, colori di sistema, Liquid
-  Glass solo su ciò che galleggia (pannello rapido, barre delle schede, pulsanti in fondo alle schede). Interfaccia in italiano e inglese, niente emoji.
+- Design: Human Interface Guidelines (skill apple-design) e Sguardo, il sistema di design comune (github.com/GGuidotz/sguardo,
+  submodule in `Vendor/Sguardo`, regole in DESIGN.md e PLAYBOOK.md), compilato insieme all'app da build.sh
+  (`SGUARDO_DIR` per provare il kit locale). Accento predefinito `SG.Accent.smartmemo` (l'indaco dell'icona, in
+  `Theme.swift`), applicato a ogni radice con `.sguardoAccent(default:)`: in Generale la persona sceglie colore
+  dell'app, di sistema o personalizzato (`SGAccentRow`); il testo di AppKit lo legge da `Theme.accent`. Impostazioni e
+  guide con `SGPage`/`SGSection`/`SGGroup`, pulsanti nel contenuto `.buttonStyle(.sgSecondary/.sgPrimary)`. Liquid
+  Glass solo su ciò che galleggia (pannello rapido, barra delle schede `SGFloatingTabBar`, pulsanti in fondo alle
+  schede con `floatingGlassButton`). Colore mai come unico segnale, colori di sistema per progetti, persone e date.
+  Interfaccia in italiano e inglese, niente emoji.
 - Mai dati reali di Giulio (note, sigle, nomi, clienti) nel repository, che è pubblico: solo esempi inventati
   (SITO, BANDO, LANCIO, #ALFA, Marta, Nexa, Studio Rossi, Luca). La sua configurazione la carica lui sul Mac con
   "Configura dalle tue note" (`SetupWizard.swift`, `SetupAnalyzer.swift`), o da un file esportato che resta suo.

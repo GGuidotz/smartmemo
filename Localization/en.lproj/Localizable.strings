@@ -10,6 +10,9 @@
 "Cartella delle note" = "Notes folder";
 "Chiudi" = "Close";
 "Copia" = "Copy";
+"Colore d'accento" = "Accent color";
+"Colore dell'app" = "App color";
+"Colore di sistema" = "System color";
 "Da fare" = "To do";
 "Dimentica" = "Forget";
 "Dimentica %@" = "Forget %@";
@@ -301,3 +304,4 @@
 "Sistemo la punteggiatura…" = "Fixing punctuation…";
 "Sostituzioni di testo di macOS" = "macOS text replacements";
 "Con \"- \" o \"1. \" cominci un elenco: Invio lo continua, Tab lo annida." = "Type \"- \" or \"1. \" to start a list: Return continues it, Tab nests it.";
+"Personalizzato" = "Custom";

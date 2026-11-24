@@ -67,11 +67,13 @@ struct SetupView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .padding(.horizontal, 32)
             .padding(.top, 36)
+            .transition(reduceMotion ? .opacity : .sgBlurReplace)
             .id(step)
 
             footer
         }
         .frame(width: Self.size.width, height: Self.size.height)
+        .sguardoAccent(default: .smartmemo)
         .id(prefs.language)
     }
 
@@ -81,25 +83,25 @@ struct SetupView: View {
         Page(symbol: "doc.text.magnifyingglass", title: L("Parti dalle tue note"),
              text: L("Incolla qui qualche pagina di to-do o di riunione scritta come la scrivi di solito. SmartMemo cerca sigle e nomi e ti propone cosa sono.")) {
             TextEditor(text: $text)
-                .font(.system(.callout, design: .monospaced))
+                .font(.system(size: 12, design: .monospaced))
                 .scrollContentBackground(.hidden)
                 .padding(8)
-                .background(Color(nsColor: .textBackgroundColor), in: .rect(cornerRadius: 10))
-                .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(Color.primary.opacity(0.1)))
+                .sgRowSurface()
                 .frame(height: 250)
                 .accessibilityLabel(L("Le tue note"))
-            HStack {
+            HStack(spacing: 8) {
                 Button(L("Apri un file…")) { openNotes() }
                 Button(L("Importa una configurazione…")) { importConfiguration() }
                 Spacer()
             }
+            .buttonStyle(.sgSecondary)
             if let message {
-                Text(message).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                Text(message).font(SG.Font.body).foregroundStyle(SG.Ink.secondary).fixedSize(horizontal: false, vertical: true)
             }
             Label(L("Il testo resta in questa finestra: non si salva e non esce dal Mac. Si salva solo ciò che decidi nei passi dopo."),
                   systemImage: "lock")
-                .font(.callout)
-                .foregroundStyle(.secondary)
+                .font(SG.Font.caption)
+                .foregroundStyle(SG.Ink.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -113,18 +115,19 @@ struct SetupView: View {
                 VStack(spacing: 0) {
                     if candidates.isEmpty {
                         Text(L("Non ho trovato sigle o nomi: aggiungili con + qui sotto."))
-                            .foregroundStyle(.secondary)
+                            .font(SG.Font.body)
+                            .foregroundStyle(SG.Ink.secondary)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(10)
+                            .padding(SG.Space.rowInset)
                     }
                     ForEach($candidates) { $c in
+                        if c.id != candidates.first?.id { SGDivider() }
                         CandidateRow(candidate: $c)
-                        Divider()
                     }
                 }
             }
             .frame(height: 300)
-            .background(Color(nsColor: .textBackgroundColor).opacity(0.6), in: .rect(cornerRadius: 10))
+            .sgRowSurface()
             if let role = adding {
                 NewNameField(prompt: role == .project ? L("Sigla, es. SITO") : L("Nome, es. Marta o Studio Rossi")) {
                     addCandidate($0, role: role)
@@ -140,6 +143,7 @@ struct SetupView: View {
                         .help(L("Aggiungi una persona o un cliente"))
                     Spacer()
                 }
+                .buttonStyle(.sgSecondary)
             }
         }
     }
@@ -149,27 +153,44 @@ struct SetupView: View {
     private var highlightStep: some View {
         Page(symbol: "highlighter", title: L("Cosa evidenziare"),
              text: L("Scegli cosa si accende mentre scrivi. Ciò che spegni si riconosce lo stesso: Oggi e i progetti continuano a funzionare.")) {
-            Toggle(isOn: $prefs.highlightProjects) { Label(L("Progetti: capsula colorata"), systemImage: "capsule") }
-            Toggle(isOn: $prefs.highlightPeople) { Label(L("Persone e clienti: indaco con puntini"), systemImage: "person") }
-            Toggle(isOn: $prefs.highlightDates) { Label(L("Date e orari: sottolineatura arancione"), systemImage: "calendar") }
-            Toggle(isOn: $prefs.highlightUrgent) { Label(L("URGENTE: capsula rossa"), systemImage: "exclamationmark.circle") }
+            SGGroup {
+                highlightRow(L("Progetti: capsula colorata"), symbol: "capsule", isOn: $prefs.highlightProjects)
+                SGDivider()
+                highlightRow(L("Persone e clienti: indaco con puntini"), symbol: "person", isOn: $prefs.highlightPeople)
+                SGDivider()
+                highlightRow(L("Date e orari: sottolineatura arancione"), symbol: "calendar", isOn: $prefs.highlightDates)
+                SGDivider()
+                highlightRow(L("URGENTE: capsula rossa"), symbol: "exclamationmark.circle", isOn: $prefs.highlightUrgent)
+            }
             if !text.isEmpty {
                 Text(L("Anteprima sulle tue note"))
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
+                    .font(SG.Font.label)
+                    .foregroundStyle(SG.Ink.secondary)
                     .padding(.top, 4)
                 ScrollView {
                     Text(preview)
-                        .font(.callout)
+                        .font(SG.Font.body)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(10)
                         .textSelection(.enabled)
                 }
                 .frame(height: 170)
-                .background(Color(nsColor: .textBackgroundColor), in: .rect(cornerRadius: 10))
+                .sgRowSurface()
             }
         }
-        .toggleStyle(.switch)
+    }
+
+    /// Una riga di "Cosa evidenziare": simbolo, nome della regola e interruttore.
+    private func highlightRow(_ title: String, symbol: String, isOn: Binding<Bool>) -> some View {
+        SGLabeledRow {
+            Label {
+                Text(title)
+            } icon: {
+                Image(systemName: symbol).frame(width: 18)
+            }
+        } trailing: {
+            SGToggle(isOn: isOn).accessibilityLabel(title)
+        }
     }
 
     /// Le prime righe del testo, segnate con le scelte fatte.
@@ -208,20 +229,24 @@ struct SetupView: View {
         return Page(symbol: "checkmark.circle", title: L("Pronto da salvare"),
                     text: L("%d progetti e %d persone o clienti. Salva e SmartMemo li riconosce da subito, in ogni scheda.", projects, people)) {
             Label(L("Si salva solo su questo Mac, in Application Support. Le tue note restano dove sono."), systemImage: "lock")
-                .foregroundStyle(.secondary)
+                .font(SG.Font.body)
+                .foregroundStyle(SG.Ink.secondary)
                 .fixedSize(horizontal: false, vertical: true)
             Label(L("Puoi esportare la configurazione in un file: ti serve per un altro Mac o per ripartire da qui. Il file è tuo, tienilo dove vuoi."),
                   systemImage: "square.and.arrow.up")
-                .foregroundStyle(.secondary)
+                .font(SG.Font.body)
+                .foregroundStyle(SG.Ink.secondary)
                 .fixedSize(horizontal: false, vertical: true)
             Button(L("Esporta configurazione…")) { exportConfiguration() }
+                .buttonStyle(.sgSecondary)
                 .padding(.top, 4)
             if let message {
-                Text(message).font(.callout).foregroundStyle(.secondary)
+                Text(message).font(SG.Font.body).foregroundStyle(SG.Ink.secondary)
             }
             Label(L("Cambi idea più tardi? Impostazioni › Progetti e persone, o clic destro su una parola nella nota."),
                   systemImage: "cursorarrow.click.2")
-                .foregroundStyle(.secondary)
+                .font(SG.Font.body)
+                .foregroundStyle(SG.Ink.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -233,7 +258,7 @@ struct SetupView: View {
             HStack(spacing: 6) {
                 ForEach(0..<steps, id: \.self) { i in
                     Circle()
-                        .fill(i == step ? Color.primary.opacity(0.75) : Color.primary.opacity(0.2))
+                        .fill(i == step ? SG.Ink.primary : SG.Ink.tertiary.opacity(0.5))
                         .frame(width: 6, height: 6)
                 }
             }
@@ -242,19 +267,16 @@ struct SetupView: View {
 
             Spacer()
 
-            GlassEffectContainer(spacing: 8) {
-                HStack(spacing: 8) {
-                    if step > 0 {
-                        Button(L("Indietro")) { go(step - 1) }
-                            .buttonStyle(.glass)
-                            .keyboardShortcut(.cancelAction)
-                    }
-                    Button(step == steps - 1 ? L("Salva") : L("Avanti")) { next() }
-                        .buttonStyle(.glassProminent)
-                        .keyboardShortcut(.defaultAction)
-                        .disabled(step == 0 && text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && candidates.isEmpty)
+            HStack(spacing: 8) {
+                if step > 0 {
+                    Button(L("Indietro")) { go(step - 1) }
+                        .buttonStyle(SGCapsuleButtonStyle(.secondary, size: .large))
+                        .keyboardShortcut(.cancelAction)
                 }
-                .controlSize(.large)
+                Button(step == steps - 1 ? L("Salva") : L("Avanti")) { next() }
+                    .buttonStyle(SGCapsuleButtonStyle(.primary, size: .large))
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(step == 0 && text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && candidates.isEmpty)
             }
         }
         .padding(.horizontal, 24)
@@ -284,7 +306,7 @@ struct SetupView: View {
     }
 
     private func go(_ next: Int) {
-        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) { step = min(max(0, next), steps - 1) }
+        withAnimation(SG.Motion.respecting(SG.Motion.standard)) { step = min(max(0, next), steps - 1) }
     }
 
     /// Il + della seconda pagina: in cima all'elenco, già con la scelta fatta.
@@ -363,11 +385,11 @@ private struct CandidateRow: View {
     var body: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(candidate.name).font(.body.weight(.semibold))
+                Text(candidate.name).font(SG.Font.bodyEmphasis).foregroundStyle(SG.Ink.primary)
                 if !candidate.example.isEmpty {
                     Text(candidate.example)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .font(SG.Font.caption)
+                        .foregroundStyle(SG.Ink.secondary)
                         .lineLimit(1)
                         .truncationMode(.tail)
                 }
@@ -382,7 +404,7 @@ private struct CandidateRow: View {
             .labelsHidden()
             .frame(width: 250)
         }
-        .padding(.horizontal, 10)
+        .padding(.horizontal, SG.Space.rowInset)
         .padding(.vertical, 7)
     }
 }
@@ -398,15 +420,15 @@ private struct Page<Content: View>: View {
         VStack(alignment: .leading, spacing: 10) {
             Image(systemName: symbol)
                 .font(.system(size: 26, weight: .medium))
-                .foregroundStyle(.tint)
+                .foregroundStyle(SG.Ink.secondary)
                 .accessibilityHidden(true)
             Text(title)
-                .font(.title.weight(.semibold))
-                .fontDesign(.rounded)
+                .font(SG.Font.title)
+                .foregroundStyle(SG.Ink.primary)
                 .accessibilityAddTraits(.isHeader)
             Text(text)
-                .font(.body)
-                .foregroundStyle(.secondary)
+                .font(SG.Font.instruction)
+                .foregroundStyle(SG.Ink.secondary)
                 .fixedSize(horizontal: false, vertical: true)
             VStack(alignment: .leading, spacing: 10) { content }
                 .padding(.top, 6)

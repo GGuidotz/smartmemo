@@ -3,6 +3,7 @@
 // le note. Ogni scelta qui è la stessa delle impostazioni, quindi si può saltare tutto: chiudere la finestra va bene
 // quanto arrivare in fondo. Gli esempi sono disegnati come nelle schede, così si riconoscono al primo uso.
 // HIG (onboarding): breve, si impara usando, i permessi si chiedono quando servono e spiegando perché.
+// Grafica Sguardo: titoli da 26, un solo pulsante d'accento per passo, impostazioni su righe traslucide.
 
 import AppKit
 import ServiceManagement
@@ -68,12 +69,13 @@ struct OnboardingView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .padding(.horizontal, 36)
             .padding(.top, 40)
-            .transition(.opacity)
+            .transition(reduceMotion ? .opacity : .sgBlurReplace)
             .id(step)
 
             footer
         }
         .frame(width: Self.size.width, height: Self.size.height)
+        .sguardoAccent(default: .smartmemo)
         .id(prefs.language)
     }
 
@@ -86,12 +88,12 @@ struct OnboardingView: View {
                 .frame(width: 96, height: 96)
                 .accessibilityHidden(true)
             Text(L("Benvenuto in Smart(Me)mo"))
-                .font(.largeTitle.weight(.semibold))
-                .fontDesign(.rounded)
+                .font(SG.Font.title)
+                .foregroundStyle(SG.Ink.primary)
                 .multilineTextAlignment(.center)
             Text(L("To-do e riunioni che capiscono progetti, persone e date mentre scrivi. Tutto resta sul Mac."))
-                .font(.title3)
-                .foregroundStyle(.secondary)
+                .font(SG.Font.instruction)
+                .foregroundStyle(SG.Ink.secondary)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
             SampleCard(title: L("Oggi")) {
@@ -102,8 +104,8 @@ struct OnboardingView: View {
             }
             .padding(.top, 6)
             Text(L("Ti mostro come si usa in quattro passi. Puoi chiudere quando vuoi."))
-                .font(.callout)
-                .foregroundStyle(.secondary)
+                .font(SG.Font.body)
+                .foregroundStyle(SG.Ink.secondary)
         }
         .frame(maxWidth: .infinity)
     }
@@ -132,20 +134,24 @@ struct OnboardingView: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 4)
-            Toggle(L("Apertura rapida con %@", HotKey.display), isOn: $prefs.hotKeyEnabled)
-            Toggle(L("Icona nella barra dei menu"), isOn: $prefs.menuBarIcon)
-            Toggle(L("Apri all'accesso"), isOn: $launchAtLogin)
-                .onChange(of: launchAtLogin) {
-                    do {
-                        if launchAtLogin { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
-                    } catch {
-                        launchAtLogin = SMAppService.mainApp.status == .enabled
+            SGGroup {
+                SGToggleRow(L("Apertura rapida con %@", HotKey.display), isOn: $prefs.hotKeyEnabled)
+                SGDivider()
+                SGToggleRow(L("Icona nella barra dei menu"), isOn: $prefs.menuBarIcon)
+                SGDivider()
+                SGToggleRow(L("Apri all'accesso"), isOn: $launchAtLogin)
+                    .onChange(of: launchAtLogin) {
+                        do {
+                            if launchAtLogin { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
+                        } catch {
+                            launchAtLogin = SMAppService.mainApp.status == .enabled
+                        }
                     }
-                }
-            Toggle(L("Schede in primo piano"), isOn: $prefs.cardsOnTop)
-            Footnote(L("Con l'apertura all'accesso la scorciatoia risponde sempre. La puntina in alto in ogni scheda la tiene sopra le altre finestre."))
+                SGDivider()
+                SGToggleRow(L("Schede in primo piano"), isOn: $prefs.cardsOnTop)
+            }
+            SGFootnote(L("Con l'apertura all'accesso la scorciatoia risponde sempre. La puntina in alto in ogni scheda la tiene sopra le altre finestre."))
         }
-        .toggleStyle(.switch)
     }
 
     private var meetings: some View {
@@ -154,13 +160,13 @@ struct OnboardingView: View {
             SampleCard(title: L("Riunione #ALFA")) {
                 SampleSummary()
                 Text("\(L("prossimo meeting il")) \(SampleStyle.date(L("12 marzo alle 10:00")))")
-                    .font(.callout)
             }
-            IntelligenceStatus()
-                .font(.callout)
-            Toggle(L("Riassunti con Apple Intelligence"), isOn: $prefs.useAppleIntelligence)
-                .toggleStyle(.switch)
-            Footnote(L("Il modello sta sul Mac: le note non escono mai. Senza Apple Intelligence il riassunto si fa con le regole (righe numerate e nomi tra parentesi)."))
+            SGGroup {
+                SGRowBlock { IntelligenceStatus() }
+                SGDivider()
+                SGToggleRow(L("Riassunti con Apple Intelligence"), isOn: $prefs.useAppleIntelligence)
+            }
+            SGFootnote(L("Il modello sta sul Mac: le note non escono mai. Senza Apple Intelligence il riassunto si fa con le regole (righe numerate e nomi tra parentesi)."))
         }
     }
 
@@ -177,10 +183,9 @@ struct OnboardingView: View {
             } label: {
                 Label(L("Configura dalle tue note…"), systemImage: "doc.text.magnifyingglass")
             }
-            .buttonStyle(.glass)
-            .controlSize(.large)
+            .buttonStyle(SGCapsuleButtonStyle(.secondary, size: .large))
             .padding(.top, 4)
-            Footnote(L("Incolli qualche pagina delle tue note e decidi tu cosa è progetto, cosa è persona e cosa evidenziare. Resta tutto sul Mac."))
+            SGFootnote(L("Incolli qualche pagina delle tue note e decidi tu cosa è progetto, cosa è persona e cosa evidenziare. Resta tutto sul Mac."))
             Tip(symbol: "gearshape", text: L("Impostazioni (⌘,): Apple Intelligence, aggiornamenti, note di rilascio e feedback."))
         }
     }
@@ -192,7 +197,7 @@ struct OnboardingView: View {
             HStack(spacing: 6) {
                 ForEach(0..<steps, id: \.self) { i in
                     Circle()
-                        .fill(i == step ? Color.primary.opacity(0.75) : Color.primary.opacity(0.2))
+                        .fill(i == step ? SG.Ink.primary : SG.Ink.tertiary.opacity(0.5))
                         .frame(width: 6, height: 6)
                 }
             }
@@ -201,20 +206,17 @@ struct OnboardingView: View {
 
             Spacer()
 
-            GlassEffectContainer(spacing: 8) {
-                HStack(spacing: 8) {
-                    if step > 0 {
-                        Button(L("Indietro")) { go(step - 1) }
-                            .buttonStyle(.glass)
-                            .keyboardShortcut(.cancelAction)
-                    }
-                    Button(step == steps - 1 ? L("Apri le to-do di oggi") : L("Avanti")) {
-                        if step == steps - 1 { finish() } else { go(step + 1) }
-                    }
-                    .buttonStyle(.glassProminent)
-                    .keyboardShortcut(.defaultAction)
+            HStack(spacing: 8) {
+                if step > 0 {
+                    Button(L("Indietro")) { go(step - 1) }
+                        .buttonStyle(SGCapsuleButtonStyle(.secondary, size: .large))
+                        .keyboardShortcut(.cancelAction)
                 }
-                .controlSize(.large)
+                Button(step == steps - 1 ? L("Apri le to-do di oggi") : L("Avanti")) {
+                    if step == steps - 1 { finish() } else { go(step + 1) }
+                }
+                .buttonStyle(SGCapsuleButtonStyle(.primary, size: .large))
+                .keyboardShortcut(.defaultAction)
             }
         }
         .padding(.horizontal, 24)
@@ -222,7 +224,7 @@ struct OnboardingView: View {
     }
 
     private func go(_ next: Int) {
-        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) { step = min(max(0, next), steps - 1) }
+        withAnimation(SG.Motion.respecting(SG.Motion.standard)) { step = min(max(0, next), steps - 1) }
     }
 }
 
@@ -237,28 +239,20 @@ private struct StepPage<Content: View>: View {
         VStack(alignment: .leading, spacing: 12) {
             Image(systemName: symbol)
                 .font(.system(size: 28, weight: .medium))
-                .foregroundStyle(.tint)
+                .foregroundStyle(SG.Ink.secondary)
                 .accessibilityHidden(true)
             Text(title)
-                .font(.title.weight(.semibold))
-                .fontDesign(.rounded)
+                .font(SG.Font.title)
+                .foregroundStyle(SG.Ink.primary)
                 .accessibilityAddTraits(.isHeader)
             Text(text)
-                .font(.title3)
-                .foregroundStyle(.secondary)
+                .font(SG.Font.instruction)
+                .foregroundStyle(SG.Ink.secondary)
                 .fixedSize(horizontal: false, vertical: true)
             VStack(alignment: .leading, spacing: 10) { content }
                 .padding(.top, 6)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-    }
-}
-
-private struct Footnote: View {
-    var text: String
-    init(_ text: String) { self.text = text }
-    var body: some View {
-        Text(text).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
     }
 }
 
@@ -282,16 +276,16 @@ private struct SampleCard<Content: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 7) {
             Text(title)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
+                .font(SG.Font.label)
+                .foregroundStyle(SG.Ink.secondary)
                 .frame(maxWidth: .infinity)
             content
         }
-        .font(.callout)
+        .font(SG.Font.body)
         .padding(14)
         .frame(maxWidth: 420, alignment: .leading)
-        .background(Color(nsColor: .textBackgroundColor), in: .rect(cornerRadius: 12))
-        .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color.primary.opacity(0.08)))
+        .background(Color(nsColor: .textBackgroundColor), in: .rect(cornerRadius: SG.Radius.row, style: .continuous))
+        .overlay(RoundedRectangle.sgRow.strokeBorder(SG.Fill.rowBorder, lineWidth: SG.Stroke.hairline))
         .shadow(color: .black.opacity(0.08), radius: 8, y: 3)
         .frame(maxWidth: .infinity)
         .accessibilityElement(children: .combine)
@@ -304,21 +298,22 @@ private struct SampleTask<Content: View>: View {
     var urgent = false
     var done = false
     @ViewBuilder var label: Content
+    @Environment(\.sgAccent) private var accent
 
     var body: some View {
         HStack(spacing: 7) {
             Image(systemName: done ? "checkmark.circle.fill" : "circle")
-                .foregroundStyle(done ? Color.accentColor : (urgent ? Color.red : Color.secondary))
+                .foregroundStyle(done ? accent.base : (urgent ? Color.red : SG.Ink.secondary))
             if let project {
                 Text(project)
-                    .font(.callout.weight(.semibold))
+                    .font(SG.Font.bodyEmphasis)
                     .padding(.horizontal, 6)
                     .background(Color(nsColor: Theme.projectColor(project, knowledge: Knowledge())).opacity(0.16), in: .capsule)
                     .overlay(Capsule().strokeBorder(Color(nsColor: Theme.projectColor(project, knowledge: Knowledge())).opacity(0.55)))
             }
             if urgent {
                 Text("URGENTE")
-                    .font(.caption2.weight(.bold))
+                    .font(.system(size: 10, weight: .bold))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 5)
                     .padding(.vertical, 1)
@@ -326,14 +321,14 @@ private struct SampleTask<Content: View>: View {
             }
             label
                 .strikethrough(done)
-                .foregroundStyle(done ? Color.secondary : Color.primary)
+                .foregroundStyle(done ? SG.Ink.secondary : SG.Ink.primary)
         }
     }
 }
 
 private struct SampleSeparator: View {
     var body: some View {
-        Text("-----").foregroundStyle(.tertiary)
+        Text("-----").foregroundStyle(SG.Ink.tertiary)
     }
 }
 
@@ -342,11 +337,11 @@ private struct SampleSummary: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
             Label(L("Riassunto · Apple Intelligence"), systemImage: "sparkles")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
+                .font(SG.Font.label)
+                .foregroundStyle(SG.Ink.secondary)
             Text("\(Text(L("Sintesi.")).bold()) \(L("Proposta da chiudere entro fine mese."))")
             HStack(spacing: 6) {
-                Image(systemName: "circle").foregroundStyle(.secondary)
+                Image(systemName: "circle").foregroundStyle(SG.Ink.secondary)
                 Text("\(L("Riscrivere l'introduzione")) · \(SampleStyle.person("Luca"))")
             }
         }
@@ -370,16 +365,17 @@ private struct SampleChoice: View {
     var body: some View {
         VStack(spacing: 6) {
             Image(systemName: symbol).font(.system(size: 24, weight: .medium))
-            Text(title).font(.headline)
+            Text(title).font(SG.Font.bodyEmphasis)
             Text(key)
-                .font(.caption.monospaced().weight(.semibold))
-                .foregroundStyle(.secondary)
+                .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                .foregroundStyle(SG.Ink.secondary)
                 .padding(.horizontal, 6)
                 .padding(.vertical, 1)
-                .background(.quaternary, in: .rect(cornerRadius: 4))
+                .background(SG.Fill.neutralButton, in: .rect(cornerRadius: 4))
         }
+        .foregroundStyle(SG.Ink.primary)
         .frame(width: 104, height: 96)
-        .glassEffect(.regular, in: .rect(cornerRadius: 18))
+        .sgRowSurface(in: .sgRow)
         .accessibilityElement(children: .combine)
     }
 }

@@ -284,7 +284,7 @@ final class PinAccessory: NSTitlebarAccessoryViewController {
     func update() {
         let on = card.onTop
         button.image = NSImage(systemSymbolName: on ? "pin.fill" : "pin", accessibilityDescription: L("Tieni in primo piano"))
-        button.contentTintColor = on ? .controlAccentColor : .secondaryLabelColor
+        button.contentTintColor = on ? Theme.accent : .secondaryLabelColor
         button.toolTip = on ? L("In primo piano: clic per lasciarla tra le altre finestre") : L("Tieni in primo piano")
         button.setAccessibilityValue(on ? L("Sì") : L("No"))
     }
@@ -315,6 +315,7 @@ struct CardView: View {
         }
         .background(Color(nsColor: .textBackgroundColor))
         .frame(minWidth: 320, minHeight: 240)
+        .sguardoAccent(default: .smartmemo)
     }
 
     /// Cosa sta facendo l'app, o l'ultimo avviso.
@@ -351,7 +352,7 @@ struct CardView: View {
             } label: {
                 Label(L("Oggi"), systemImage: "sun.max")
             }
-            .buttonStyle(.glass)
+            .floatingGlassButton()
             .help(L("Tutte le to-do da fare, di ogni pagina e riunione"))
         }
     }
@@ -382,14 +383,14 @@ struct CardView: View {
                             Label(L("Togli il riassunto"), systemImage: "xmark")
                                 .labelStyle(.iconOnly)
                         }
-                        .buttonStyle(.glass)
+                        .floatingGlassButton()
                         .help(L("Togli il riassunto (⌘Z lo rimette)"))
                     }
                     Button { card.conclude(model: model) } label: {
                         Label(card.hasSummary ? L("Rifai il riassunto") : L("Concludi riunione"),
                               systemImage: ai ? "sparkles" : "checklist")
                     }
-                    .buttonStyle(.glassProminent)
+                    .floatingGlassProminentButton()
                     .disabled(card.busy)
                     .keyboardShortcut(.return, modifiers: .command)
                     .help(ai ? L("Riassunto e to-do in cima, scritti da Apple Intelligence sul Mac (⌘Invio)")

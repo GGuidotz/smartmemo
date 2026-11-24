@@ -99,7 +99,7 @@ struct QuickChooser: View {
                 .font(.callout)
         }
         .padding(22)
-        .glassEffect(.regular, in: .rect(cornerRadius: 28))
+        .glassSurface(in: RoundedRectangle(cornerRadius: 28, style: .continuous))
         // Margine trasparente attorno al vetro: il bordo e l'ombra non vengono tagliati dal pannello.
         .padding(24)
         .fixedSize()
@@ -126,7 +126,7 @@ struct QuickChooser: View {
             .frame(width: 118, height: 118)
             .contentShape(.rect(cornerRadius: 18))
         }
-        .buttonStyle(.glass)
+        .floatingGlassButton()
         .buttonBorderShape(.roundedRectangle(radius: 18))
         .keyboardShortcut(KeyEquivalent(key), modifiers: [])
         .help(L("%@ (tasto %@)", kind.newTitle, hint))

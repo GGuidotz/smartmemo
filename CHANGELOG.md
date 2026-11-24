@@ -3,6 +3,19 @@
 Formato: `## <versione> · <data>`, poi `### Novità`, `### Miglioramenti`, `### Correzioni`, una riga `- ` per
 cambiamento. release.sh usa la sezione della versione come note della release.
 
+## 0.2.2 · 2026-11-24
+
+Una veste nuova: forme, colori e movimenti di Sguardo, il sistema di design comune alle nostre app, e un colore d'accento a scelta.
+
+### Novità
+- Colore d'accento a scelta. In Impostazioni › Generale: l'indaco di SmartMemo, il colore d'accento di macOS o uno tuo. Vale per pulsanti, interruttori, cerchi spuntati e riquadro del riassunto.
+
+### Miglioramenti
+- Impostazioni ridisegnate: righe su un velo traslucido con un filo sottile, menu a capsula e una nota breve sotto ogni gruppo. La barra delle schede galleggia in fondo e mostra il nome della scheda scelta; ⌘1…⌘6 funzionano come prima.
+- Guida iniziale e configurazione guidata nello stesso stile: titoli più sobri, pulsanti a capsula, interruttori in righe, un solo pulsante colorato per passo; i passi si susseguono con una dissolvenza morbida.
+- Il vetro resta solo su ciò che galleggia: pannello rapido, barre delle schede e pulsanti in fondo alle schede.
+- Si compila da un clone: Sguardo arriva con `git clone --recursive`.
+
 ## 0.2.1 · 2026-11-17
 
 Più riservatezza: firma più stretta dell'app, configurazione leggibile solo da te e una pagina che spiega dove vanno i dati.

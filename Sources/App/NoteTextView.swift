@@ -280,7 +280,7 @@ final class NoteTextView: NSTextView {
     /// L'accensione del riassunto appena scritto.
     func glowSummary() {
         guard let summaryContent else { return }
-        addGlow(summaryContent, color: summaryByAI ? .systemPurple : .controlAccentColor)
+        addGlow(summaryContent, color: summaryByAI ? .systemPurple : Theme.accent)
         scrollRangeToVisible(NSRange(location: summaryContent.location, length: 0))
     }
 
@@ -356,7 +356,7 @@ final class NoteTextView: NSTextView {
         let box = NSRect(x: margin, y: top, width: bounds.width - margin * 2, height: bottom - top).insetBy(dx: 0, dy: -2)
         guard box.intersects(dirty), box.width > 40 else { return }
         let shape = NSBezierPath(roundedRect: box, xRadius: 12, yRadius: 12)
-        (summaryByAI ? NSColor.systemPurple : NSColor.controlAccentColor).withAlphaComponent(0.06).setFill()
+        (summaryByAI ? NSColor.systemPurple : Theme.accent).withAlphaComponent(0.06).setFill()
         shape.fill()
         if summaryByAI, let ctx = NSGraphicsContext.current?.cgContext {
             ctx.saveGState()
@@ -368,7 +368,7 @@ final class NoteTextView: NSTextView {
             NSGradient(colors: colors.map { $0.withAlphaComponent(0.8) })?.draw(in: box, angle: 0)
             ctx.restoreGState()
         } else {
-            NSColor.controlAccentColor.withAlphaComponent(0.3).setStroke()
+            Theme.accent.withAlphaComponent(0.3).setStroke()
             shape.lineWidth = 1
             shape.stroke()
         }
@@ -412,7 +412,7 @@ final class NoteTextView: NSTextView {
     private func drawCheck(in box: NSRect, done: Bool, urgent: Bool) {
         let circle = NSBezierPath(ovalIn: box.insetBy(dx: 0.75, dy: 0.75))
         if done {
-            NSColor.controlAccentColor.setFill()
+            Theme.accent.setFill()
             circle.fill()
             let tick = NSBezierPath()
             tick.move(to: NSPoint(x: box.minX + box.width * 0.28, y: box.minY + box.height * 0.52))
@@ -528,7 +528,7 @@ final class NoteTextView: NSTextView {
         undoManager?.setActionName(line.done ? L("Segna da fare") : L("Segna come fatta"))
         if !line.done {
             let length = line.range.length + (line.boxRange == nil ? (replacement as NSString).length : 0)
-            addGlow(NSRange(location: line.range.location, length: length), color: .controlAccentColor)
+            addGlow(NSRange(location: line.range.location, length: length), color: Theme.accent)
         }
     }
 
@@ -639,7 +639,7 @@ final class NoteTextView: NSTextView {
         var location = start
         for s in segments {
             let length = (s as NSString).length
-            addGlow(NSRange(location: location, length: length), color: .controlAccentColor)
+            addGlow(NSRange(location: location, length: length), color: Theme.accent)
             location += length + 1
         }
     }
